@@ -1,0 +1,175 @@
+package nirmalya.aatithya.restmodule.lms.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
+import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
+import nirmalya.aatithya.restmodule.his.controller.HISOPDRestController;
+import nirmalya.aatithya.restmodule.his.dao.HISOPDDao;
+import nirmalya.aatithya.restmodule.his.model.HISBedMasterRestModel;
+import nirmalya.aatithya.restmodule.his.model.HISPatientRestModel;
+import nirmalya.aatithya.restmodule.lms.dao.AcademicCourseDao;
+import nirmalya.aatithya.restmodule.master.model.RestAdvanceManagementModel;
+
+@RestController
+@RequestMapping(value = "his/")
+public class RestAcademicCourseController {
+
+	Logger logger = LoggerFactory.getLogger(HISOPDRestController.class);
+
+	@Autowired
+	AcademicCourseDao academicCourseDao;
+
+	// rest-academic-course-add
+
+	@PostMapping(value = "rest-academic-course-add")
+	public ResponseEntity<JsonResponse<Object>> saveCourse(@RequestBody String courseData, @RequestParam String userId,
+			@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method :saveCourse starts");
+		logger.info("Method :saveCourse endss");
+		return academicCourseDao.saveCourse(courseData, userId, org, orgDiv);
+	}
+
+	// view
+	@RequestMapping(value = "rest-viewCourse", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewCourse(@RequestParam String orgName, @RequestParam String orgDivision) {
+		logger.info("Method :viewCourse start");
+		logger.info("Method :viewCourse endss");
+		return academicCourseDao.viewCourse(orgName, orgDivision);
+	}
+
+	// edit
+	@RequestMapping(value = "rest-editCourse", method = { RequestMethod.GET })
+	public JsonResponse<Object> editCourse(@RequestParam String Id, @RequestParam String organization,
+			@RequestParam String orgDivision) {
+		logger.info("Method :editCourse start");
+		logger.info("Method :editCourse endss");
+		return academicCourseDao.editCourse(Id, organization, orgDivision);
+	}
+
+	@RequestMapping(value = "rest-academic-course-employee-view", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewEmpolyee(@RequestParam String orgName, @RequestParam String orgDivision) {
+		logger.info("Method :viewEmpolyee start");
+		logger.info("Method :viewEmpolyee endss");
+		return academicCourseDao.viewEmpolyee(orgName, orgDivision);
+	}
+
+	@PostMapping(value = "rest-academic-course-employee-add")
+	public ResponseEntity<JsonResponse<Object>> saveAssign(@RequestBody String data, @RequestParam String userId,
+			@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method :saveAssign starts");
+		logger.info("Method :saveAssign endss");
+		return academicCourseDao.saveAssign(data, userId, org, orgDiv);
+	}
+
+	// viewList
+
+	@RequestMapping(value = "rest-get-all-instructor-list", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewList(@RequestParam String orgName, @RequestParam String orgDivision) {
+		logger.info("Method :viewList start");
+		logger.info("Method :viewList endss");
+		return academicCourseDao.viewList(orgName, orgDivision);
+	}
+
+	//
+	@GetMapping(value = "getCourseAutoSearchList")
+	public ResponseEntity<JsonResponse<List<DropDownModel>>> getCourseAutoSearchList(@RequestParam String id,
+			@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method :getCourseAutoSearchList starts");
+
+		logger.info("Method :getCourseAutoSearchList endss");
+		return academicCourseDao.getCourseAutoSearchList(id, org, orgDiv);
+	}
+
+	//
+	@RequestMapping(value = "rest-viewCourses", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewCourses(@RequestParam String orgName, String orgDivision, String courseId) {
+		logger.info("Method :viewCourses start");
+
+		logger.info("Method :viewCourses endss");
+		return academicCourseDao.viewCourses(orgName, orgDivision, courseId);
+	}
+
+	//
+	@RequestMapping(value = "rest-get-catlog-courses", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewCatlog(@RequestParam String orgName, String orgDivision, String catId,
+			String level) {
+		logger.info("Method :viewCatlog start");
+
+		logger.info("Method :viewCatlog endss");
+		return academicCourseDao.viewCatlog(orgName, orgDivision, catId, level);
+	}
+
+	// viewStudent
+	@RequestMapping(value = "rest-subscription-student-view", method = RequestMethod.GET)
+	public JsonResponse<Object> viewStudent(@RequestParam String orgName, @RequestParam String orgDivision) {
+		logger.info("Method : viewStudent Controller start");
+		JsonResponse<Object> response = academicCourseDao.viewStudent(orgName, orgDivision);
+		logger.info("Method : viewStudent Controller end");
+		return response;
+	}
+
+	// enable
+	@GetMapping("rest-subscription-student-course-enable")
+	public JsonResponse<Object> enableCourse(@RequestParam String id, @RequestParam String status) {
+		logger.info("Method : enableCourse starts");
+		JsonResponse<Object> response = academicCourseDao.enableCourse(id, status);
+		logger.info("Method : enableCourse ends");
+		return response;
+	}
+
+	@PostMapping(value = "rest-academic-course-content-add")
+	public ResponseEntity<JsonResponse<Object>> saveCourseContent(@RequestBody String data, @RequestParam String userId,
+			@RequestParam String org, @RequestParam String orgDiv, @RequestParam String courseId) {
+		logger.info("Method :saveCourseContent starts");
+		logger.info("Method :saveCourseContent endss");
+		return academicCourseDao.saveCourseContent(data, userId, org, orgDiv, courseId);
+	}
+	
+	@RequestMapping(value = "rest-get-course-details", method = { RequestMethod.GET })
+	public JsonResponse<Object> getCourseDetails(@RequestParam String orgName, String orgDivision, String courseId) {
+		logger.info("Method :getCourseDetails start");
+
+		logger.info("Method :getCourseDetails endss");
+		return academicCourseDao.getCourseDetails(orgName, orgDivision,courseId);
+	}
+	
+	@PostMapping(value = "rest-academic-course-module-add")
+	public ResponseEntity<JsonResponse<Object>> saveCorseModule(@RequestBody String data, @RequestParam String userId,
+			@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method :saveCorseModule starts");
+		logger.info("Method :saveCorseModule endss");
+		return academicCourseDao.saveCorseModule(data, userId, org, orgDiv);
+	}
+	
+	@PostMapping(value = "rest-academic-course-lession-add")
+	public ResponseEntity<JsonResponse<Object>> saveCourseLession(@RequestBody String data, @RequestParam String userId,
+			@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method :saveCourseLession starts");
+		logger.info("Method :saveCourseLession endss");
+		return academicCourseDao.saveCourseLession(data, userId, org, orgDiv);
+	}
+	
+	@RequestMapping(value = "rest-get-course-lessions", method = { RequestMethod.GET })
+	public JsonResponse<Object> getCourseLessions(@RequestParam String orgName, String orgDivision, String moduleId) {
+		logger.info("Method :getCourseLessions start");
+
+		logger.info("Method :getCourseLessions endss");
+		return academicCourseDao.getCourseLessions(orgName, orgDivision,moduleId);
+	}
+
+}
