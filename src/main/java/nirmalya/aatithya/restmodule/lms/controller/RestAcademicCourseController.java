@@ -171,5 +171,26 @@ public class RestAcademicCourseController {
 		logger.info("Method :getCourseLessions endss");
 		return academicCourseDao.getCourseLessions(orgName, orgDivision,moduleId);
 	}
+	
+	@RequestMapping(value = "rest-getAllHeadCount", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllHeadCount(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String userId) {
+		logger.info("Method :getAllHeadCount start");
+
+		logger.info("Method :getAllHeadCount endss");
+		return academicCourseDao.getAllHeadCount(orgName,orgDivision,userId);
+
+	}
+	
+	@RequestMapping(value = "rest-getAllOperationalRecord", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllOperationalRecord(@RequestParam String orgName ,@RequestParam String orgDivision
+			,@RequestParam String userId,@RequestParam String id) {
+		logger.info("Method :getAllOperationalRecord start");
+
+		logger.info("Method :getAllOperationalRecord endss");
+		return academicCourseDao.getAllOperationalRecord(orgName,orgDivision,userId,id);
+
+	}
+	
+	
 
 }

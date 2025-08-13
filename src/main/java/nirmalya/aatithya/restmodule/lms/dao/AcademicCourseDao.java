@@ -528,5 +528,60 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getAllHeadCount(String orgName, String orgDivision, String userId) {
+		logger.info("Method : getAllHeadCount Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_userId='" + userId + "';";
+			
+			logger.info(value);
+			
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "getAllHeadCount").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getAllHeadCount Dao ends" + resp);
+		return resp;
+
+	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getAllOperationalRecord(String orgName, String orgDivision, String userId,String id) {
+		logger.info("Method : getAllOperationalRecord Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_userId='" + userId + "' ,@p_id='" + id + "';";
+			
+			logger.info(value);
+			
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "getAllOperationalRecord").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getAllOperationalRecord Dao ends" + resp);
+		return resp;
+
+	}
 
 }
