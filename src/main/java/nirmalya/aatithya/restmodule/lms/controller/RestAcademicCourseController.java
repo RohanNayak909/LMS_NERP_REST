@@ -191,6 +191,14 @@ public class RestAcademicCourseController {
 
 	}
 	
+	@RequestMapping(value = "rest-editCourseDetails", method = { RequestMethod.GET })
+	public JsonResponse<Object> editCourseDetails(@RequestParam String Id, @RequestParam String organization,
+			@RequestParam String orgDivision) {
+		logger.info("Method :editCourseDetails start");
+		logger.info("Method :editCourseDetails endss");
+		return academicCourseDao.editCourseDetails(Id, organization, orgDivision);
+	}
+	
 	
 
 }

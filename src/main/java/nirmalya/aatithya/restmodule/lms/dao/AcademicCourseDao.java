@@ -1,5 +1,7 @@
 package nirmalya.aatithya.restmodule.lms.dao;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +19,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -38,59 +43,84 @@ public class AcademicCourseDao {
 
 	// save
 	@SuppressWarnings("unchecked")
-	public ResponseEntity<JsonResponse<Object>> saveCourse(String courseData, String userId, String org,
-			String orgDiv) {
-		logger.info("method: saveCourse Starts");
+	public ResponseEntity<JsonResponse<Object>> saveCourse(String courseData, String userId, String org, String orgDiv) {
+	    logger.info("method: saveCourse Starts");
 
-		JsonResponse<Object> resp = new JsonResponse<>();
-		try {
-			String value = "SET @courseData='" + courseData + "', @p_userId='" + userId + "', @p_org='" + org
-					+ "', @p_orgDiv='" + orgDiv + "';";
+	    JsonResponse<Object> resp = new JsonResponse<>();
+	    try {
+	        // Validate and clean JSON data
+	        ObjectMapper mapper = new ObjectMapper();
+	        ObjectNode jsonNode = (ObjectNode) mapper.readTree(courseData);
+	        // Clean courseDesc field
+	        if (jsonNode.has("courseDesc")) {
+	            String courseDesc = jsonNode.get("courseDesc").asText();
+	            logger.info("Raw courseDesc: " + courseDesc);
+	            // Decode URL-encoded characters if present
+	            try {
+	                courseDesc = URLDecoder.decode(courseDesc.replace("% ", "%20"), StandardCharsets.UTF_8.name());
+	            } catch (Exception e) {
+	                logger.warn("URL decoding failed for courseDesc: " + e.getMessage());
+	                // Fallback to raw courseDesc if decoding fails
+	            }
+	            // Clean excessive backslashes and escape sequences
+	            courseDesc = courseDesc.replaceAll("\\\\{2,}", "").replaceAll("\\\\n", "").replaceAll("\\\\t", "");
+	            logger.info("Cleaned courseDesc: " + courseDesc);
+	            jsonNode.put("courseDesc", courseDesc);
+	        }
+	        // Extract courseId early using Jackson for reliability
+	        String courseId = "";
+	        if (jsonNode.has("courseId") && !jsonNode.get("courseId").isNull()) {
+	            courseId = jsonNode.get("courseId").asText();
+	            logger.info("Extracted courseId from JSON: " + courseId);
+	        } else {
+	            logger.info("No courseId found in JSON or courseId is null");
+	        }
 
-			String courseId = "";
-			logger.info("Constructed actionValue: " + value);
-			try {
-				Gson gson = new Gson();
-				JsonObject jsonObject = gson.fromJson(courseData, JsonObject.class);
-				if (jsonObject.has("courseId")) {
-					courseId = jsonObject.get("courseId").getAsString();
-				}
-			} catch (Exception parseException) {
-				logger.error("Error parsing courseData with Gson: ", parseException);
-			}
+	        // Serialize to JSON with proper escaping
+	        String safeCourseData = mapper.writeValueAsString(jsonNode);
+	        logger.info("Serialized safeCourseData: " + safeCourseData);
+	        // Escape single quotes for MySQL (avoid excessive backslash escaping)
+	        safeCourseData = safeCourseData.replace("'", "''");
 
-			if (courseId == null || courseId.isEmpty()) {
-				em.createNamedStoredProcedureQuery("academic_course_routines").setParameter("actionType", "saveCourse")
-						.setParameter("actionValue", value).execute();
+	        String value = "SET @courseData='" + safeCourseData + "', @p_userId='" + userId + "', @p_org='" + org
+	                + "', @p_orgDiv='" + orgDiv + "';";
+	        logger.info("Constructed actionValue: " + value);
 
-				resp.setMessage("Course created successfully!");
-				resp.setCode("Success");
-			} else {
-				em.createNamedStoredProcedureQuery("academic_course_routines")
-						.setParameter("actionType", "modifyCourse").setParameter("actionValue", value).execute();
+	        // Execute saveCourse or modifyCourse based on courseId
+	        if (courseId == null || courseId.trim().isEmpty()) {
+	            logger.info("Creating new course (courseId is null or empty)");
+	            em.createNamedStoredProcedureQuery("academic_course_routines")
+	                    .setParameter("actionType", "saveCourse")
+	                    .setParameter("actionValue", value)
+	                    .execute();
+	            resp.setMessage("Course created successfully!");
+	            resp.setCode("Success");
+	        } else {
+	            logger.info("Modifying existing course with courseId: " + courseId);
+	            em.createNamedStoredProcedureQuery("academic_course_routines")
+	                    .setParameter("actionType", "modifyCourse")
+	                    .setParameter("actionValue", value)
+	                    .execute();
+	            resp.setMessage("Course modified successfully!");
+	            resp.setCode("Success");
+	        }
+	    } catch (Exception e) {
+	        logger.error("Error in saveCourse: " + e.getMessage()); // Changed from info to error for severity
+	        try {
+	            String[] err = serverDao.errorProcedureCall(e);
+	            resp.setCode("Failed");
+	            resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
+	        } catch (Exception nestedException) {
+	            logger.error("Error while handling exception: " + nestedException.getMessage()); // Changed from info to error
+	            resp.setCode("Failed");
+	            resp.setMessage("Oops! Something went wrong during error handling");
+	        }
+	    }
 
-				resp.setMessage("Course modified successfully!");
-				resp.setCode("Success");
-			}
-		} catch (Exception e) {
-			logger.error("Error in saveCourse: ", e);
-			try {
-				String[] err = serverDao.errorProcedureCall(e);
-				resp.setCode("Failed");
-				resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
-			} catch (Exception nestedException) {
-				logger.error("Error while handling exception: ", nestedException);
-				resp.setCode("Failed");
-				resp.setMessage("Oops! Something went wrong during error handling");
-			}
-		}
-
-		ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
-
-		logger.info("method: saveCourse Ends" + response);
-		return response;
+	    ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+	    logger.info("method: saveCourse Ends: " + response);
+	    return response;
 	}
-
 	// view
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> viewCourse(String orgName, String orgDivision) {
@@ -580,6 +610,30 @@ public class AcademicCourseDao {
 		}
 
 		logger.info("Method : getAllOperationalRecord Dao ends" + resp);
+		return resp;
+
+	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> editCourseDetails(String Id, String organization, String orgDivision) {
+		logger.info("Method : editCourseDetails Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_courseId='" + Id + "';";
+
+			logger.info("vvvv" + value);
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "editCourseDetails").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data Fetched successfully");
+		} catch (Exception e) {
+			e.printStackTrace();
+			resp.setMessage("Something Went Wrong !");
+		}
+		logger.info("Method : editCourseDetails Dao ends" + resp);
 		return resp;
 
 	}
