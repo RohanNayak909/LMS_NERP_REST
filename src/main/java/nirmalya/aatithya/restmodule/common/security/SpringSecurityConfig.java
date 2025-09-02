@@ -1,12 +1,18 @@
 package nirmalya.aatithya.restmodule.common.security;
 
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import nirmalya.aatithya.restmodule.security.config.JwtAuthenticationEntryPoint;
 import nirmalya.aatithya.restmodule.security.config.JwtRequestFilter;
@@ -38,9 +44,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 		// We don't need CSRF for this example
 		httpSecurity.csrf().disable()
 				// dont authenticate this particular request
-				.authorizeRequests()
-				.antMatchers(AUTH_WHITELIST).permitAll()
-				//.antMatchers("/**").permitAll()
+				.authorizeRequests().antMatchers(AUTH_WHITELIST).permitAll()
+				.antMatchers("/**").permitAll()
 				.antMatchers("/account/**").permitAll()
 				.antMatchers("/training/**").permitAll()
 				.antMatchers("/production/**").permitAll()
@@ -189,11 +194,23 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 		httpSecurity.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 	}
 
-	/**
-	 * @Override protected void configure(HttpSecurity http) throws Exception {
-	 *           http.csrf().disable().authorizeRequests()
-	 *           .antMatchers("/**").permitAll()
-	 *           .antMatchers("/swagger-ui.html").permitAll() ; }
-	 */
+	
+
+	@Bean
+	CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(Arrays.asList("*"));
+		configuration.setAllowedMethods(Arrays.asList("GET", "POST"));
+		configuration.addAllowedHeader("Authorization");
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
+	}
+
+	  protected void configure1(HttpSecurity http) throws Exception {
+	            http.csrf().disable().authorizeRequests()
+	            .antMatchers("/**").permitAll()
+	            .antMatchers("/swagger-ui.html").permitAll() ; }
+	 
 
 }
