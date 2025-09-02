@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 
 import nirmalya.aatithya.restmodule.common.EnvironmentVaribles;
@@ -39,6 +40,9 @@ public class UserLoginDao {
 	
 	@Autowired
 	EnvironmentVaribles env;
+	
+	@Autowired
+	PasswordEncoder passEncoder;
 	
 	public static String USERID = "";
 	public static String SALES_MANAGER_ROLE = "";
@@ -126,6 +130,109 @@ public class UserLoginDao {
 		logger.info("response web ==="+response);
 		return response;
 
+	}
+	
+	
+	
+	@SuppressWarnings("unchecked")
+	public ResponseEntity<JsonResponse<User>> getUserByUsernameLMS(String username, String password) {
+	    logger.info("Method : getUserByUsernameLMS starts");
+
+	    JsonResponse<User> jsonResponse = new JsonResponse<>();
+	    jsonResponse.setCode("");
+	    jsonResponse.setMessage("");
+
+	    List<User> userArray = new ArrayList<>();
+	    List<String> userRole = new ArrayList<>();
+	    ADMIN_ROLE = "";
+	    SALES_MANAGER_ROLE = "";
+	    USERID = "";
+
+	    try {
+	        String value = "SET @p_userName='" + username + "';";
+	        logger.info("value web===" + value);
+
+	        List<Object[]> x = em.createNamedStoredProcedureQuery("userRoutines")
+	                .setParameter("actionType", "getByName")
+	                .setParameter("actionValue", value)
+	                .getResultList();
+
+	        logger.info("DB result: " + x);
+
+	        if (x == null || x.isEmpty()) {
+	            jsonResponse.setCode("failed");
+	            jsonResponse.setMessage("Invalid User Name");
+	            return new ResponseEntity<>(jsonResponse, HttpStatus.UNAUTHORIZED);
+	        }
+
+	        for (Object[] m : x) {
+	            String role = (String) m[6];
+	            if (role != null && role.length() > 0) {
+	                userRole = Arrays.asList(role.split(","));
+	            }
+
+	            String orglogo = (m[16] != null && !m[16].toString().trim().isEmpty())
+	                    ? env.getMobileView() + "document/document/" + m[16].toString()
+	                    : "";
+	            String prfileImg = (m[17] != null && !m[17].toString().trim().isEmpty())
+	                    ? env.getMobileView() + "document/employee/" + m[17].toString()
+	                    : "";
+
+	            User user = new User(
+	                    m[0], m[1], m[2], m[3], m[4],
+	                    null, null, null, null, null, null,
+	                    m[5], null, null,
+	                    userRole,
+	                    m[7], m[8], m[9], m[10], m[11],
+	                    m[12], m[13], m[14], m[15],
+	                    orglogo, prfileImg, null
+	            );
+	            userArray.add(user);
+	        }
+
+	        // ✅ Password validation
+	        String encodedPassword = (String) x.get(0)[2]; // assuming index 5 stores encrypted password
+	        if (!passEncoder.matches(password, encodedPassword)) {
+	            jsonResponse.setCode("failed");
+	            jsonResponse.setMessage("Password Incorrect");
+	            return new ResponseEntity<>(jsonResponse, HttpStatus.UNAUTHORIZED);
+	        }
+
+	        // If username + password are valid
+	        if (!userArray.isEmpty()) {
+	            jsonResponse.setCode("success");
+	            jsonResponse.setMessage("User Login SuccessFully");
+	            jsonResponse.setBody(userArray.get(0));
+	        }
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        jsonResponse.setCode("failed");
+	        jsonResponse.setMessage("Something went wrong while validating user");
+	        return new ResponseEntity<>(jsonResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+	    }
+
+	    // Role assignments
+	    USERID = userArray.get(0).getUser();
+	    List<String> role = (List<String>) userArray.get(0).getRoles();
+
+	    Optional<String> data = role.stream().filter(d -> d.equals("rol001")).findAny();
+	    Optional<String> dataSalesManger = role.stream().filter(d -> d.equals("rol003")).findAny();
+
+	    if (data.isPresent()) {
+	        ADMIN_ROLE = data.get();
+	    }
+	    if (dataSalesManger.isPresent()) {
+	        SALES_MANAGER_ROLE = dataSalesManger.get();
+	    }
+
+	    ResponseEntity<JsonResponse<User>> response =
+	            new ResponseEntity<>(jsonResponse, HttpStatus.OK);
+
+	    logger.info("Method : getUserByUsernameLMS ends");
+	    logger.info("response web ===" + response);
+
+	    return response;
 	}
 
 	/**

@@ -58,6 +58,18 @@ public class UserLoginController {
 		return userLoginDao.getUserByUsername(username);
 	}
 	
+/**get_login_api_lms**/	
+	@RequestMapping(value="getUserByUsernameLMS" , method={RequestMethod.GET})
+	public ResponseEntity<JsonResponse<User>> getUserByUsernameLMS(@RequestParam String username,@RequestParam String password) {
+		logger.info("Method : getUserByUsernameLMS starts");
+		
+		logger.info("Method : getUserByUsernameLMS ends");
+		return userLoginDao.getUserByUsernameLMS(username,password);
+	}
+	
+	
+
+	
 	/**
 	 * Function to register user
 	 *

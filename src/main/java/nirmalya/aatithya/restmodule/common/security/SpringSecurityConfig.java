@@ -170,9 +170,13 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/hotel/**").permitAll()
 				.antMatchers("/his/rest-editCourseDetails").permitAll()
 				
-
+				.antMatchers("/user/getUserByUsernameLMS").permitAll()
+				
+				.antMatchers("/user/getUserByUsernameLMS").permitAll()
                 
-                //.antMatchers("/api/get-departmentLists-api").permitAll()
+                .antMatchers("/master/rest-save-enrollment-data").permitAll()
+                
+                .antMatchers("/his/rest-getAllOperationalRecord").permitAll()
 				
 				// all other requests need to be authenticated
 				.anyRequest().authenticated().and().
