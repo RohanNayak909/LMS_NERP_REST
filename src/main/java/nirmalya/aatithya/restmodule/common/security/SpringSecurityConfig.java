@@ -182,6 +182,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/master/rest-save-enrollment-data").permitAll()
                 
                 .antMatchers("/his/rest-getAllOperationalRecord").permitAll()
+                
+                .antMatchers("/master/rest-save-user-details-lms").permitAll()
 				
 				// all other requests need to be authenticated
 				.anyRequest().authenticated().and().
