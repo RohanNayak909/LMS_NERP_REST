@@ -200,17 +200,11 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(Arrays.asList("*"));
-		configuration.setAllowedMethods(Arrays.asList("GET", "POST"));
+		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS", "OPTION", "PUT", "DELETE"));
 		configuration.addAllowedHeader("Authorization");
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
 	}
-
-	  protected void configure1(HttpSecurity http) throws Exception {
-	            http.csrf().disable().authorizeRequests()
-	            .antMatchers("/**").permitAll()
-	            .antMatchers("/swagger-ui.html").permitAll() ; }
-	 
 
 }
