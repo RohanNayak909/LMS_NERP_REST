@@ -41,6 +41,16 @@ import nirmalya.aatithya.restmodule.lms.dao.RestStudentEnrollCourseDao;
 		return restStudentEnrollCourseDao.saveUserData(orgName, orgDivision, userId, data);
 	}
 	
+	
+	@RequestMapping(value = "rest-save-user-details-lms", method = { RequestMethod.POST })
+	public JsonResponse<Object> saveUserDatalms(@RequestParam String orgName, String orgDivision, String userId,
+			@RequestBody String data) {
+		logger.info("Method :saveUserDatalms start");
+
+		logger.info("Method :saveUserDatalms endss");
+		return restStudentEnrollCourseDao.saveUserDatalms(orgName, orgDivision, userId, data);
+	}
+	
 	@RequestMapping(value = "rest-save-enrollment-data", method = { RequestMethod.POST })
 	public JsonResponse<Object> saveEnrollmentData(@RequestParam String orgName, String orgDivision, String userId,
 			@RequestBody String data) {
