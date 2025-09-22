@@ -201,6 +201,24 @@ public class RestAcademicCourseController {
 		return academicCourseDao.editCourseDetails(Id, organization, orgDivision);
 	}
 	
+	@PostMapping(value = "rest-academic-course-duration-add")
+	public ResponseEntity<JsonResponse<Object>> saveCourseDuration(@RequestBody String data, @RequestParam String userId,
+			@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method :saveCourseDuration starts");
+		logger.info("Method :saveCourseDuration endss");
+		return academicCourseDao.saveCourseDuration(data, userId, org, orgDiv);
+	}
+	
+	
+
+	@RequestMapping(value = "rest-getadminAllHeadCount", method = { RequestMethod.GET })
+	public JsonResponse<Object> getadminAllHeadCount(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String userId) {
+		logger.info("Method :getadminAllHeadCount start");
+
+		logger.info("Method :getadminAllHeadCount endss");
+		return academicCourseDao.getadminAllHeadCount(orgName,orgDivision,userId);
+
+	}
 	
 
 }

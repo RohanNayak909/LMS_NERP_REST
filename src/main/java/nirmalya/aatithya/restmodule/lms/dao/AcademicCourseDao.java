@@ -10,6 +10,7 @@ import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,23 +88,21 @@ public class AcademicCourseDao {
 	        logger.info("Constructed actionValue: " + value);
 
 	        // Execute saveCourse or modifyCourse based on courseId
-	        if (courseId == null || courseId.trim().isEmpty()) {
-	            logger.info("Creating new course (courseId is null or empty)");
-	            em.createNamedStoredProcedureQuery("academic_course_routines")
-	                    .setParameter("actionType", "saveCourse")
-	                    .setParameter("actionValue", value)
-	                    .execute();
-	            resp.setMessage("Course created successfully!");
-	            resp.setCode("Success");
-	        } else {
-	            logger.info("Modifying existing course with courseId: " + courseId);
-	            em.createNamedStoredProcedureQuery("academic_course_routines")
-	                    .setParameter("actionType", "modifyCourse")
-	                    .setParameter("actionValue", value)
-	                    .execute();
-	            resp.setMessage("Course modified successfully!");
-	            resp.setCode("Success");
-	        }
+
+			if (courseId == null || courseId.trim().isEmpty()) {
+				logger.info("Creating new course (courseId is null or empty)");
+				em.createNamedStoredProcedureQuery("academic_course_routines").setParameter("actionType", "saveCourse")
+						.setParameter("actionValue", value).execute();
+				resp.setMessage("Course created successfully!");
+				resp.setCode("Success");
+			} else {
+				logger.info("Modifying existing course with courseId: " + courseId);
+				em.createNamedStoredProcedureQuery("academic_course_routines")
+						.setParameter("actionType", "modifyCourse").setParameter("actionValue", value).execute();
+				resp.setMessage("Course modified successfully!");
+				resp.setCode("Success");
+			}
+			 
 	    } catch (Exception e) {
 	        logger.error("Error in saveCourse: " + e.getMessage()); // Changed from info to error for severity
 	        try {
@@ -634,6 +633,150 @@ public class AcademicCourseDao {
 			resp.setMessage("Something Went Wrong !");
 		}
 		logger.info("Method : editCourseDetails Dao ends" + resp);
+		return resp;
+
+	}
+	
+	
+	// save duration
+	/*
+	 * @SuppressWarnings("unchecked") public ResponseEntity<JsonResponse<Object>>
+	 * saveCourseDuration(String data, String userId, String org, String orgDiv) {
+	 * logger.info("method: saveCourseDuration Starts");
+	 * 
+	 * JsonResponse<Object> resp = new JsonResponse<>(); JSONObject jsonObj = new
+	 * JSONObject(data); try { String courseId = jsonObj.optString("courseId");
+	 * String fileName = jsonObj.optString("fileName"); String fileType =
+	 * jsonObj.optString("fileType"); String duration =
+	 * jsonObj.optString("duration");
+	 * 
+	 * 
+	 * 
+	 * 
+	 * String value = "SET @data='" + data + "', @p_userId='" + userId +
+	 * "', @p_org='" + org + "',@p_courseId='" + courseId + "', @p_orgDiv='" +
+	 * orgDiv + "',@p_firstName='" + fileName + "',@p_fileType='" + fileType +
+	 * "',@p_duration='" + duration + "';";
+	 * 
+	 * logger.info("Constructed actionValue: " + value);
+	 * 
+	 * em.createNamedStoredProcedureQuery("academic_course_routines").setParameter(
+	 * "actionType", "saveCourseDuration") .setParameter("actionValue",
+	 * value).execute();
+	 * 
+	 * resp.setMessage("Data save successfully"); resp.setCode("Success");
+	 * 
+	 * } catch (Exception e) { logger.error("Error in saveCourse: ", e); try {
+	 * String[] err = serverDao.errorProcedureCall(e); resp.setCode("Failed");
+	 * resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong"); }
+	 * catch (Exception nestedException) {
+	 * logger.error("Error while handling exception: ", nestedException);
+	 * resp.setCode("Failed");
+	 * resp.setMessage("Oops! Something went wrong during error handling"); } }
+	 * 
+	 * ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp,
+	 * HttpStatus.CREATED);
+	 * 
+	 * logger.info("method: saveCourseDuration Ends" + response); return response; }
+	 */
+	
+	@SuppressWarnings("unchecked")
+	public ResponseEntity<JsonResponse<Object>> saveCourseDuration(String data, String userId, String org, String orgDiv) {
+	    logger.info("method: saveCourseDuration Starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+	    JSONObject jsonObj = new JSONObject(data);
+
+	    try {
+	        String courseId = jsonObj.optString("courseId");
+	        String fileName = jsonObj.optString("fileName");
+	        String fileType = jsonObj.optString("fileType");
+	        String duration = jsonObj.optString("duration");
+
+	        // 🔹 Prepare params
+	        String value = "SET @data='" + data + "', @p_userId='" + userId + "', @p_org='" + org +
+	                       "',@p_courseId='" + courseId + "', @p_orgDiv='" + orgDiv +
+	                       "',@p_firstName='" + fileName + "',@p_fileType='" + fileType +
+	                       "',@p_duration='" + duration + "';";
+
+	        logger.info("Constructed actionValue: " + value);
+
+	        // 🔹 Insert duration
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	            .setParameter("actionType", "saveCourseDuration")
+	            .setParameter("actionValue", value)
+	            .execute();
+
+	        // 🔹 Fetch durations for this course
+	        List<Object[]> resultList = em.createNamedStoredProcedureQuery("academic_course_routines")
+	            .setParameter("actionType", "getCourseDurations")
+	            .setParameter("actionValue", "SET @p_courseId='" + courseId + "';")
+	            .getResultList();
+
+	        // 🔹 Convert result to List<Map>
+	        List<Map<String, Object>> durationList = new ArrayList<>();
+	        for (Object[] row : resultList) {
+	            Map<String, Object> obj = new HashMap<>();
+	            obj.put("durationId", row[0]);
+	            obj.put("userId", row[1]);
+	            obj.put("courseId", row[2]);
+	            obj.put("fileName", row[3]);
+	            obj.put("fileType", row[4]);
+	            obj.put("duration", row[5]);
+	            obj.put("createdOn", row[6]);
+	            obj.put("createdBy", row[7]);
+	            obj.put("orgName", row[8]);
+	            obj.put("orgDivision", row[9]);
+	            durationList.add(obj);
+	        }
+
+	        // ✅ Return list as body
+	        resp.setBody(durationList);
+	        resp.setMessage("Data save successfully");
+	        resp.setCode("Success");
+
+	    } catch (Exception e) {
+	        logger.error("Error in saveCourseDuration: ", e);
+	        try {
+	            String[] err = serverDao.errorProcedureCall(e);
+	            resp.setCode("Failed");
+	            resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
+	        } catch (Exception nestedException) {
+	            logger.error("Error while handling exception: ", nestedException);
+	            resp.setCode("Failed");
+	            resp.setMessage("Oops! Something went wrong during error handling");
+	        }
+	    }
+
+	    ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+	    logger.info("method: saveCourseDuration Ends " + response);
+	    return response;
+	}
+
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getadminAllHeadCount(String orgName, String orgDivision, String userId) {
+		logger.info("Method : getadminAllHeadCount Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_userId='" + userId + "';";
+			
+			logger.info(value);
+			
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "getadminAllHeadCount").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getadminAllHeadCount Dao ends" + resp);
 		return resp;
 
 	}
