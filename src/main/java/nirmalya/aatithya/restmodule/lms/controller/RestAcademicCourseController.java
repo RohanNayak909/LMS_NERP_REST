@@ -46,6 +46,15 @@ public class RestAcademicCourseController {
 		return academicCourseDao.saveCourse(courseData, userId, org, orgDiv);
 	}
 
+	
+	@PostMapping(value = "rest-academic-saveTraining")
+	public ResponseEntity<JsonResponse<Object>> saveTraining(@RequestBody String payload, @RequestParam String userId,
+			@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method :saveTraining starts");
+		logger.info("Method :saveTraining endss");
+		return academicCourseDao.saveTraining(payload, userId, org, orgDiv);
+	}
+	
 	// view
 	@RequestMapping(value = "rest-viewCourse", method = { RequestMethod.GET })
 	public JsonResponse<Object> viewCourse(@RequestParam String orgName, @RequestParam String orgDivision) {
