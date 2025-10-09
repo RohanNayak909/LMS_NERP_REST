@@ -63,6 +63,14 @@ public class RestAcademicCourseController {
 		return academicCourseDao.viewCourse(orgName, orgDivision);
 	}
 
+	
+	@RequestMapping(value = "rest-viewtraining", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewtraining(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :viewtraining start");
+		logger.info("Method :viewtraining endss");
+		return academicCourseDao.viewtraining(orgName, orgDivision,id);
+	}
+	
 	// edit
 	@RequestMapping(value = "rest-editCourse", method = { RequestMethod.GET })
 	public JsonResponse<Object> editCourse(@RequestParam String Id, @RequestParam String organization,

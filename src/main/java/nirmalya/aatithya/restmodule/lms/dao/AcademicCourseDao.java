@@ -222,6 +222,27 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> viewtraining(String orgName, String orgDivision,String id) {
+		logger.info("Method : viewCourse Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "' ;";
+			logger.info(value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "viewCourse").setParameter("actionValue", value).getResultList();
+			resp.setBody(list);
+			logger.info("hhhhhhhhhhhhhhhhh" + list);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		logger.info("Method : viewCourse Dao ends");
+		return resp;
+
+	}
 
 	// edit
 
