@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
 
 @Repository
@@ -15,8 +16,11 @@ public class RestExamDao {
 
   private static final Logger logger = LoggerFactory.getLogger(RestExamDao.class);
 
-  @Autowired
-  private EntityManager em;
+	@Autowired
+	EntityManager em;
+
+	@Autowired
+	ServerDao serverDao;
 
   private static String esc(String v) {
     return v == null ? null : v.replace("'", "\\'");
@@ -53,22 +57,44 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> productGetQuestion(String userId, String productId, Integer qno) {
-    JsonResponse<Object> resp = new JsonResponse<>();
-    try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "',@p_qno=" + (qno == null ? 1 : qno) + ";";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "productGetQuestion")
-          .setParameter("actionValue", value)
-          .getResultList();
-      resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
-    } catch (Exception e) {
-      resp.setCode("failed"); resp.setMessage(e.getMessage());
-      logger.error("productGetQuestion error", e);
-    }
-    return resp;
-  }
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> productGetQuestion(String userId, String productId, Integer qno) {
+		JsonResponse<Object> resp = new JsonResponse<>();
+		try {
+			String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "',@p_qno="
+					+ (qno == null ? 1 : qno) + ";";
+			List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
+					.setParameter("actionType", "productGetQuestion").setParameter("actionValue", value)
+					.getResultList();
+			resp.setBody(rows);
+			resp.setCode("success");
+			resp.setMessage("OK");
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			logger.error("productGetQuestion error", e);
+		}
+		return resp;
+	}
+  
+	/*
+	 * @SuppressWarnings("unchecked") public JsonResponse<Object> getQuestion(String
+	 * userId, String productId, Integer qno) {
+	 * logger.info("Method : productGetQuestion Dao starts");
+	 * 
+	 * JsonResponse<Object> resp = new JsonResponse<>();
+	 * 
+	 * try { String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" +
+	 * esc(productId) + "',@p_qno=" + (qno == null ? 1 : qno) + ";";
+	 * logger.info(value); List<Object[]> list =
+	 * em.createNamedStoredProcedureQuery("lms_exam_routines")
+	 * .setParameter("actionType", "productGetQuestion").setParameter("actionValue",
+	 * value).getResultList(); resp.setBody(list); logger.info("hhhhhhhhhhhhhhhhh" +
+	 * list); } catch (Exception e) { e.printStackTrace(); }
+	 * logger.info("Method : productGetQuestion Dao ends"); return resp;
+	 * 
+	 * }
+	 */
 
   public JsonResponse<Object> productAnswer(String userId, String productId, Integer qno,
                                             String selectedJson, String subjective, Integer timeSpentSec) {

@@ -14,7 +14,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
-import com.mysql.cj.x.protobuf.MysqlxDatatypes.Scalar.String;
 
 import nirmalya.aatithya.restmodule.security.config.JwtAuthenticationEntryPoint;
 import nirmalya.aatithya.restmodule.security.config.JwtRequestFilter;

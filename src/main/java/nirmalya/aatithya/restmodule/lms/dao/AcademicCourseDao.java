@@ -230,10 +230,10 @@ public class AcademicCourseDao {
 		JsonResponse<Object> resp = new JsonResponse<Object>();
 
 		try {
-			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "' ;";
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='" + id;
 			logger.info(value);
 			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
-					.setParameter("actionType", "viewCourse").setParameter("actionValue", value).getResultList();
+					.setParameter("actionType", "viewTraining").setParameter("actionValue", value).getResultList();
 			resp.setBody(list);
 			logger.info("hhhhhhhhhhhhhhhhh" + list);
 		} catch (Exception e) {
