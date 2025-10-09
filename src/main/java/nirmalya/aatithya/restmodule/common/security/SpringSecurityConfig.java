@@ -14,6 +14,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
+import com.mysql.cj.x.protobuf.MysqlxDatatypes.Scalar.String;
+
 import nirmalya.aatithya.restmodule.security.config.JwtAuthenticationEntryPoint;
 import nirmalya.aatithya.restmodule.security.config.JwtRequestFilter;
 
@@ -110,7 +112,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 
                 .antMatchers("/gstreturn/**").permitAll()
 				.antMatchers("/gst/**").permitAll()
-                
+
                 
                 .antMatchers("/api/getClientDetails").permitAll()
                 .antMatchers("/api/getClientDetailsByPagination").permitAll()
@@ -188,6 +190,31 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/his/rest-academic-course-duration-add").permitAll()
 
                 .antMatchers("/master/rest-viewEnrollCourses").permitAll()
+
+    // ---- add ALL exam routes here ----
+        // list quizzes mapped to product, quiz headers
+        .antMatchers("/master/rest-product-quizzes").permitAll()
+        .antMatchers("/master/rest-quiz-list").permitAll()
+
+        // runtime (user flows)
+        .antMatchers("/master/rest-exam-start").permitAll()
+        .antMatchers("/master/rest-exam-get-question").permitAll()
+        .antMatchers("/master/rest-exam-answer").permitAll()
+        .antMatchers("/master/rest-exam-submit").permitAll()
+        .antMatchers("/master/rest-exam-result-header").permitAll()
+        .antMatchers("/master/rest-exam-result-breakdown").permitAll()
+        .antMatchers("/master/rest-product-outline").permitAll()
+        .antMatchers("/master/rest-product-questions").permitAll()
+
+        // reports (optional)
+        .antMatchers("/master/rest-report-attempts-30d").permitAll()
+        .antMatchers("/master/rest-report-user-history").permitAll()
+        .antMatchers("/master/rest-report-leaderboard").permitAll()
+
+        // diagnostic (optional; remove in prod)
+        .antMatchers("/master/rest-exam-ping", "/diag/**").permitAll()
+
+
                 
 				// all other requests need to be authenticated
 				.anyRequest().authenticated().and().
