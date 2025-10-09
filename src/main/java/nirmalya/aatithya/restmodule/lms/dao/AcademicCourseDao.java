@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import nirmalya.aatithya.restmodule.common.ServerDao;
@@ -120,6 +122,85 @@ public class AcademicCourseDao {
 	    logger.info("method: saveCourse Ends: " + response);
 	    return response;
 	}
+	
+	@SuppressWarnings({ "unchecked", "unused" })
+	public ResponseEntity<JsonResponse<Object>> saveTraining(String payload, String userId, String org, String orgDiv) {
+	    logger.info("method: saveTraining Starts " + payload);
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+	    String courseId = "";
+
+	    try {
+	        // ✅ Gson with HTML escaping disabled
+	        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+	        JsonObject jsonObject = gson.fromJson(payload, JsonObject.class);
+
+	        // ✅ Get courseId
+	        if (jsonObject.has("courseId")) {
+	            courseId = jsonObject.get("courseId").getAsString();
+	        }
+
+	        // ✅ Convert categoryData to JSON array and clean content
+	        if (jsonObject.has("categoryData")) {
+	            String categoryDataStr = jsonObject.get("categoryData").getAsString();
+	            JsonArray categoryArray = gson.fromJson(categoryDataStr, JsonArray.class);
+
+	            for (int i = 0; i < categoryArray.size(); i++) {
+	                JsonObject obj = categoryArray.get(i).getAsJsonObject();
+	                if (obj.has("content")) {
+	                    String content = obj.get("content").getAsString();
+	                    // Clean control characters and replace non-breaking space
+	                    content = content.replace("\n", "")
+	                                     .replace("\r", "")
+	                                     .replace("\t", " ")
+	                                     .replace("\u00A0", " ");
+	                    // Do NOT escape \ or ' here - let JSON handle it, and escape ' for SQL later on the full payload
+	                    obj.addProperty("content", content);
+	                }
+	            }
+
+	            // Replace categoryData with cleaned array
+	            jsonObject.add("categoryData", categoryArray);
+	        }
+
+	        // ✅ Convert full JSON object to string
+	        String safePayload = gson.toJson(jsonObject);
+
+	        // ✅ Escape single quotes for SQL string literal
+	        safePayload = safePayload.replace("'", "''");
+
+	        // ✅ Construct SET @data for MySQL
+	        String actionValue = "SET @data='" + safePayload + "', " +
+	                             "@p_userId='" + userId + "', " +
+	                             "@p_org='" + org + "', " +
+	                             "@p_orgDiv='" + orgDiv + "';";
+
+	        logger.info("Constructed actionValue for MySQL: " + actionValue);
+
+	        // ✅ Determine actionType
+	        String actionType = (courseId != null && !courseId.isEmpty()) ? "saveTraining" : "modifyTraining";
+
+	        // ✅ Execute stored procedure
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	          .setParameter("actionType", actionType)
+	          .setParameter("actionValue", actionValue)
+	          .execute();
+
+	        resp.setMessage((actionType.equals("saveTraining") ? "Added" : "Modified") + " Training Successfully!");
+	        resp.setCode("Success");
+
+	    } catch (Exception e) {
+	        logger.error("Error in saveTraining: ", e);
+	        resp.setCode("Failed");
+	        resp.setMessage(e.getMessage());
+	    }
+
+	    ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+	    logger.info("method: saveTraining Ends " + response);
+	    return response;
+	}
+
+
 	// view
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> viewCourse(String orgName, String orgDivision) {
