@@ -12,6 +12,7 @@ import javax.persistence.NamedStoredProcedureQuery;
 import javax.persistence.ParameterMode;
 import javax.persistence.StoredProcedureParameter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysql.cj.x.protobuf.MysqlxDatatypes.Scalar.String;
 
 @Entity
 
@@ -100,6 +101,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 				@StoredProcedureParameter(mode = ParameterMode.IN, name = "actionValue", type = String.class) }
 
 		),
+
+		@NamedStoredProcedureQuery(
+  name = "lms_exam_routines",
+  procedureName = "lms_exam_routines",
+  parameters = {
+    @StoredProcedureParameter(mode = ParameterMode.IN, name = "actionType", type = String.class),
+    @StoredProcedureParameter(mode = ParameterMode.IN, name = "actionValue", type = String.class)
+  }
+),
 
 		@NamedStoredProcedureQuery(name = "gatepassStaffregRoutines", procedureName = "gatepass_staff_reg_routines", parameters = {
 				@StoredProcedureParameter(mode = ParameterMode.IN, name = "actionType", type = String.class),
