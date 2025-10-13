@@ -9,8 +9,14 @@ import javax.persistence.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
 
 @Repository
@@ -20,6 +26,10 @@ public class RestExamDao {
 
   @Autowired
   EntityManager em;
+  
+	@Autowired
+	ServerDao serverDao;
+
 
   /* ======================= helpers ======================= */
 
@@ -496,4 +506,82 @@ public class RestExamDao {
     public final Object attemptId;
     AttemptIdBody(Object id) { this.attemptId = id; }
   }
+  
+  
+//DAO Method
+@SuppressWarnings("unchecked")
+public ResponseEntity<JsonResponse<Object>> saveQuiz(String quizData, String userId, String org, String orgDiv) {
+   logger.info("method: saveQuiz Starts");
+
+   JsonResponse<Object> resp = new JsonResponse<>();
+   try {
+       // Validate and clean JSON data
+       ObjectMapper mapper = new ObjectMapper();
+       ObjectNode jsonNode = (ObjectNode) mapper.readTree(quizData);
+       
+       // Clean text fields if necessary (e.g., for excessive escapes in text areas)
+       String[] textFields = {"question_text", "option_a", "option_b", "option_c", "option_d", 
+                              "rationale_a", "rationale_b", "rationale_c", "rationale_d", "syllabus_ref"};
+       for (String field : textFields) {
+           if (jsonNode.has(field)) {
+               String fieldValue = jsonNode.get(field).asText();
+               logger.info("Raw {}: {}", field, fieldValue);
+               // Clean excessive backslashes and escape sequences
+               fieldValue = fieldValue.replaceAll("\\\\{2,}", "").replaceAll("\\\\n", "").replaceAll("\\\\t", "");
+               logger.info("Cleaned {}: {}", field, fieldValue);
+               jsonNode.put(field, fieldValue);
+           }
+       }
+       
+       // Extract quizId early using Jackson for reliability
+       String quizId = "";
+       if (jsonNode.has("quizId") && !jsonNode.get("quizId").isNull()) {
+           quizId = jsonNode.get("quizId").asText();
+           logger.info("Extracted quizId from JSON: " + quizId);
+       } else {
+           logger.info("No quizId found in JSON or quizId is null");
+       }
+
+       // Serialize to JSON with proper escaping
+       String safeQuizData = mapper.writeValueAsString(jsonNode);
+       logger.info("Serialized safeQuizData: " + safeQuizData);
+       // Escape single quotes for MySQL (avoid excessive backslash escaping)
+       safeQuizData = safeQuizData.replace("'", "''");
+
+       String value = "SET @quizData='" + safeQuizData + "', @p_userId='" + userId + "', @p_org='" + org
+               + "', @p_orgDiv='" + orgDiv + "';";
+       logger.info("Constructed actionValue: " + value);
+
+       // Execute saveQuiz or modifyQuiz based on quizId
+       if (quizId == null || quizId.trim().isEmpty()) {
+           logger.info("Creating new quiz (quizId is null or empty)");
+           em.createNamedStoredProcedureQuery("lms_exam_routines").setParameter("actionType", "saveQuiz")
+                   .setParameter("actionValue", value).execute();
+           resp.setMessage("Quiz created successfully!");
+           resp.setCode("Success");
+       } else {
+           logger.info("Modifying existing quiz with quizId: " + quizId);
+           em.createNamedStoredProcedureQuery("lms_exam_routines")
+                   .setParameter("actionType", "modifyQuiz").setParameter("actionValue", value).execute();
+           resp.setMessage("Quiz modified successfully!");
+           resp.setCode("Success");
+       }
+        
+   } catch (Exception e) {
+       logger.error("Error in saveQuiz: " + e.getMessage());
+       try {
+           String[] err = serverDao.errorProcedureCall(e);
+           resp.setCode("Failed");
+           resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
+       } catch (Exception nestedException) {
+           logger.error("Error while handling exception: " + nestedException.getMessage());
+           resp.setCode("Failed");
+           resp.setMessage("Oops! Something went wrong during error handling");
+       }
+   }
+
+   ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+   logger.info("method: saveQuiz Ends: " + response);
+   return response;
+}
 }

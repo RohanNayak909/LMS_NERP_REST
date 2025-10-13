@@ -228,4 +228,13 @@ public class RestExamController {
   public JsonResponse<Object> productQuizzes(@RequestParam String productId) {
     return dao.productQuizzes(productId);
   }
+  
+//Rest Controller Method
+@PostMapping(value = "rest-quiz-config-add")
+public ResponseEntity<JsonResponse<Object>> saveQuiz(@RequestBody String quizData, @RequestParam String userId,
+       @RequestParam String org, @RequestParam String orgDiv) {
+   logger.info("Method :saveQuiz starts");
+   logger.info("Method :saveQuiz endss");
+   return dao.saveQuiz(quizData, userId, org, orgDiv);
+}
 }
