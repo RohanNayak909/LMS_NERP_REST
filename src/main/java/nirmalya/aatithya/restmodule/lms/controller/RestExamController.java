@@ -22,12 +22,12 @@ public class RestExamController {
 
   /* ======================= RUNTIME ======================= */
 
-  /* Attempt eligibility: {attempts_allowed, attempts_used, attempts_remaining, mode, quiz_code} */
-  @RequestMapping(value = "rest-exam-eligibility", method = { RequestMethod.GET })
+  @RequestMapping(value = "rest-exam-eligibilitys", method = { RequestMethod.GET })
   public JsonResponse<Object> eligibility(
       @RequestParam String userId,
       @RequestParam String productId,
       @RequestParam(required = false, defaultValue = "MOCK") String mode) {
+        logger.info("dddd",productId);
     return dao.eligibility(userId, productId, mode);
   }
 
@@ -115,7 +115,6 @@ public class RestExamController {
     return dao.resultBreakdown(userId, productId);
   }
 
-  /* Full answers + explanations */
   @RequestMapping(value = "rest-exam-result-answers", method = { RequestMethod.GET })
   public JsonResponse<Object> resultAnswers(
       @RequestParam String userId,
@@ -227,5 +226,32 @@ public class RestExamController {
   @RequestMapping(value = "rest-product-quizzes", method = { RequestMethod.GET })
   public JsonResponse<Object> productQuizzes(@RequestParam String productId) {
     return dao.productQuizzes(productId);
+  }
+
+  /* ===== ADMIN: QUESTIONS ===== */
+
+  @RequestMapping(value = "rest-question-upsert", method = { RequestMethod.POST })
+  public JsonResponse<Object> questionUpsert(
+      @RequestParam String quizCode,
+      @RequestParam(required = false) String sectionTitle,
+      @RequestParam Integer sNo,
+      @RequestParam String questionText,
+      @RequestParam String optionA,
+      @RequestParam String optionB,
+      @RequestParam String optionC,
+      @RequestParam String optionD,
+      @RequestParam String rightAnswer,
+      @RequestParam(required = false) String rationaleA,
+      @RequestParam(required = false) String rationaleB,
+      @RequestParam(required = false) String rationaleC,
+      @RequestParam(required = false) String rationaleD) {
+    return dao.questionUpsertSimple(quizCode, sectionTitle, sNo, questionText,
+        optionA, optionB, optionC, optionD, rightAnswer, rationaleA, rationaleB, rationaleC, rationaleD);
+  }
+
+  @RequestMapping(value = "rest-question-bulk-import", method = { RequestMethod.POST })
+  public JsonResponse<Object> questionBulkImport(
+      @RequestBody String bulkJson) {
+    return dao.questionBulkImportSimple(bulkJson);
   }
 }

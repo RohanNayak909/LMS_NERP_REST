@@ -37,6 +37,11 @@ public class RestExamDao {
     return null;
   }
 
+  private static Object firstRow(List<?> rows) {
+    if (rows == null || rows.isEmpty()) return null;
+    return rows.get(0);
+  }
+
   private static Object firstCell(List<?> rows) {
     if (rows == null || rows.isEmpty()) return null;
     Object r0 = rows.get(0);
@@ -95,7 +100,22 @@ public class RestExamDao {
         .append(";").toString();
 
       List<?> rows = callProc("productStart", value);
+      Object r0 = firstRow(rows);
 
+      /* Detect ATTEMPT_LIMIT shape coming from SP */
+      if (r0 instanceof Object[]) {
+        Object[] arr = (Object[]) r0;
+        // tuple expected: code, message, attempts_allowed, attempts_used, product_id, quiz_code
+        String code = arr.length > 0 && arr[0] != null ? String.valueOf(arr[0]) : null;
+        if ("ATTEMPT_LIMIT".equalsIgnoreCase(code)) {
+          resp.setCode("ATTEMPT_LIMIT");
+          resp.setMessage(arr.length > 1 && arr[1] != null ? String.valueOf(arr[1]) : "Attempt limit reached");
+          resp.setBody(rows);
+          return resp;
+        }
+      }
+
+      /* Otherwise, treat as success with attemptId in first cell */
       Object idCell = firstCell(rows);
       Object attemptId;
       if (idCell instanceof BigInteger) attemptId = ((BigInteger) idCell).longValue();
@@ -109,7 +129,7 @@ public class RestExamDao {
     } catch (Exception e) {
       SQLException sqlx = unwrapSqlException(e);
       if (sqlx != null && "45000".equals(sqlx.getSQLState())) {
-        resp.setCode("ATTEMPT_LIMIT");
+        resp.setCode("failed");
         resp.setMessage(sqlx.getMessage());
         resp.setBody(null);
       } else {
@@ -487,6 +507,55 @@ public class RestExamDao {
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
       logger.error("productQuizzes error", e);
+    }
+    return resp;
+  }
+
+  /* ============== ADMIN: QUESTIONS ============== */
+
+  public JsonResponse<Object> questionUpsertSimple(String quizCode, String sectionTitle, Integer sNo,
+                                                   String questionText, String a, String b, String c, String d,
+                                                   String rightAnswer, String ra, String rb, String rc, String rd) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = new StringBuilder()
+        .append("SET @p_quiz_code='").append(esc(quizCode)).append("',")
+        .append("@p_section_title=").append(sectionTitle == null ? "NULL" : "'" + esc(sectionTitle) + "'").append(",")
+        .append("@p_s_no=").append(sNo == null ? "NULL" : sNo).append(",")
+        .append("@p_question_text='").append(esc(questionText)).append("',")
+        .append("@p_option_a='").append(esc(a)).append("',")
+        .append("@p_option_b='").append(esc(b)).append("',")
+        .append("@p_option_c='").append(esc(c)).append("',")
+        .append("@p_option_d='").append(esc(d)).append("',")
+        .append("@p_right_answer='").append(esc(rightAnswer)).append("',")
+        .append("@p_rationale_a=").append(ra == null ? "NULL" : "'" + esc(ra) + "'").append(",")
+        .append("@p_rationale_b=").append(rb == null ? "NULL" : "'" + esc(rb) + "'").append(",")
+        .append("@p_rationale_c=").append(rc == null ? "NULL" : "'" + esc(rc) + "'").append(",")
+        .append("@p_rationale_d=").append(rd == null ? "NULL" : "'" + esc(rd) + "'")
+        .append(";").toString();
+      callProc("questionUpsertSimple", value);
+      resp.setCode("success"); resp.setMessage("OK");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("questionUpsertSimple error", e);
+    }
+    return resp;
+  }
+
+  public JsonResponse<Object> questionBulkImportSimple(String bulkJson) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = "SET @p_bulk_json='" + esc(bulkJson) + "';";
+      List<?> rows = callProc("questionBulkImportSimple", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("Imported");
+    } catch (Exception e) {
+      SQLException sx = unwrapSqlException(e);
+      if (sx != null && "45000".equals(sx.getSQLState())) {
+        resp.setCode("failed"); resp.setMessage(sx.getMessage());
+      } else {
+        resp.setCode("failed"); resp.setMessage(e.getMessage());
+      }
+      logger.error("questionBulkImportSimple error", e);
     }
     return resp;
   }

@@ -209,10 +209,14 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/master/rest-report-attempts-30d").permitAll()
         .antMatchers("/master/rest-report-user-history").permitAll()
         .antMatchers("/master/rest-report-leaderboard").permitAll()
+        .antMatchers("/master/rest-exam-eligibilitys").permitAll()
 
         // diagnostic (optional; remove in prod)
         .antMatchers("/master/rest-exam-ping", "/diag/**").permitAll()
+        // .antMatchers("/master/rest-exam-eligibility", "/diag/**").permitAll()
 
+
+		
 
                 
 				// all other requests need to be authenticated
