@@ -1,14 +1,16 @@
 package nirmalya.aatithya.restmodule.lms.dao;
 
+import java.math.BigInteger;
+import java.sql.SQLException;
 import java.util.List;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
 
 @Repository
@@ -16,19 +18,68 @@ public class RestExamDao {
 
   private static final Logger logger = LoggerFactory.getLogger(RestExamDao.class);
 
-	@Autowired
-	EntityManager em;
+  @Autowired
+  EntityManager em;
 
-	@Autowired
-	ServerDao serverDao;
+  /* ======================= helpers ======================= */
 
   private static String esc(String v) {
-    return v == null ? null : v.replace("'", "\\'");
+    if (v == null) return null;
+    return v.replace("'", "''");
+  }
+
+  private static SQLException unwrapSqlException(Throwable t) {
+    Throwable cur = t;
+    while (cur != null) {
+      if (cur instanceof SQLException) return (SQLException) cur;
+      cur = cur.getCause();
+    }
+    return null;
+  }
+
+  private static Object firstCell(List<?> rows) {
+    if (rows == null || rows.isEmpty()) return null;
+    Object r0 = rows.get(0);
+    if (r0 instanceof Object[]) {
+      Object[] arr = (Object[]) r0;
+      return arr.length > 0 ? arr[0] : null;
+    }
+    return r0;
+  }
+
+  private List<?> callProc(String actionType, String actionValue) {
+    Query q = em.createNativeQuery("CALL lms_exam_routines(:actionType, :actionValue)");
+    q.setParameter("actionType", actionType);
+    q.setParameter("actionValue", actionValue == null ? "" : actionValue);
+    return q.getResultList();
   }
 
   /* ======================= RUNTIME ======================= */
 
-  @SuppressWarnings("unchecked")
+  public JsonResponse<Object> eligibility(String userId, String productId, String mode) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_mode='").append(esc(mode == null ? "MOCK" : mode)).append("';")
+        .toString();
+
+      List<?> rows = callProc("eligibility", value);
+      resp.setBody(rows);
+      resp.setCode("success"); resp.setMessage("OK");
+    } catch (Exception e) {
+      SQLException sx = unwrapSqlException(e);
+      if (sx != null && "45000".equals(sx.getSQLState())) {
+        resp.setCode("failed"); resp.setMessage(sx.getMessage());
+      } else {
+        resp.setCode("failed"); resp.setMessage(e.getMessage());
+      }
+      logger.error("eligibility error", e);
+    }
+    return resp;
+  }
+
   public JsonResponse<Object> productStart(String orgName, String orgDivision, String userId,
                                            String productId, String mode, Integer seed, String metaJson) {
     JsonResponse<Object> resp = new JsonResponse<>();
@@ -38,63 +89,53 @@ public class RestExamDao {
         .append("@p_orgDiv='").append(esc(orgDivision)).append("',")
         .append("@p_user_id='").append(esc(userId)).append("',")
         .append("@p_product_id='").append(esc(productId)).append("',")
-        .append("@p_mode='").append(mode == null ? "MOCK" : esc(mode)).append("',")
+        .append("@p_mode=").append(mode == null ? "'MOCK'" : "'" + esc(mode) + "'").append(",")
         .append("@p_seed=").append(seed == null ? "NULL" : seed).append(",")
         .append("@p_meta_json=").append(metaJson == null ? "NULL" : "'" + esc(metaJson) + "'")
         .append(";").toString();
 
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "productStart")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<?> rows = callProc("productStart", value);
 
-      resp.setBody(rows != null && !rows.isEmpty() ? rows.get(0) : null);
-      resp.setCode("success"); resp.setMessage("Attempt started");
+      Object idCell = firstCell(rows);
+      Object attemptId;
+      if (idCell instanceof BigInteger) attemptId = ((BigInteger) idCell).longValue();
+      else if (idCell instanceof Number) attemptId = ((Number) idCell).longValue();
+      else attemptId = idCell;
+
+      resp.setCode("success");
+      resp.setMessage("Attempt started");
+      resp.setBody(new AttemptIdBody(attemptId));
+
     } catch (Exception e) {
-      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      SQLException sqlx = unwrapSqlException(e);
+      if (sqlx != null && "45000".equals(sqlx.getSQLState())) {
+        resp.setCode("ATTEMPT_LIMIT");
+        resp.setMessage(sqlx.getMessage());
+        resp.setBody(null);
+      } else {
+        resp.setCode("failed");
+        resp.setMessage("Could not start the test. Please try again.");
+        resp.setBody(null);
+      }
       logger.error("productStart error", e);
     }
     return resp;
   }
 
-	@SuppressWarnings("unchecked")
-	public JsonResponse<Object> productGetQuestion(String userId, String productId, Integer qno) {
-		JsonResponse<Object> resp = new JsonResponse<>();
-		try {
-			String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "',@p_qno="
-					+ (qno == null ? 1 : qno) + ";";
-			List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-					.setParameter("actionType", "productGetQuestion").setParameter("actionValue", value)
-					.getResultList();
-			resp.setBody(rows);
-			resp.setCode("success");
-			resp.setMessage("OK");
-		} catch (Exception e) {
-			resp.setCode("failed");
-			resp.setMessage(e.getMessage());
-			logger.error("productGetQuestion error", e);
-		}
-		return resp;
-	}
-  
-	/*
-	 * @SuppressWarnings("unchecked") public JsonResponse<Object> getQuestion(String
-	 * userId, String productId, Integer qno) {
-	 * logger.info("Method : productGetQuestion Dao starts");
-	 * 
-	 * JsonResponse<Object> resp = new JsonResponse<>();
-	 * 
-	 * try { String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" +
-	 * esc(productId) + "',@p_qno=" + (qno == null ? 1 : qno) + ";";
-	 * logger.info(value); List<Object[]> list =
-	 * em.createNamedStoredProcedureQuery("lms_exam_routines")
-	 * .setParameter("actionType", "productGetQuestion").setParameter("actionValue",
-	 * value).getResultList(); resp.setBody(list); logger.info("hhhhhhhhhhhhhhhhh" +
-	 * list); } catch (Exception e) { e.printStackTrace(); }
-	 * logger.info("Method : productGetQuestion Dao ends"); return resp;
-	 * 
-	 * }
-	 */
+  @SuppressWarnings("unchecked")
+  public JsonResponse<Object> productGetQuestion(String userId, String productId, Integer qno) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "',@p_qno="
+          + (qno == null ? 1 : qno) + ";";
+      List<Object[]> rows = (List<Object[]>) callProc("productGetQuestion", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("productGetQuestion error", e);
+    }
+    return resp;
+  }
 
   public JsonResponse<Object> productAnswer(String userId, String productId, Integer qno,
                                             String selectedJson, String subjective, Integer timeSpentSec) {
@@ -109,11 +150,7 @@ public class RestExamDao {
         .append("@p_time_spent_sec=").append(timeSpentSec == null ? 0 : timeSpentSec)
         .append(";").toString();
 
-      em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "productAnswer")
-        .setParameter("actionValue", value)
-        .getResultList();
-
+      callProc("productAnswer", value);
       resp.setCode("success"); resp.setMessage("Saved");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -123,19 +160,62 @@ public class RestExamDao {
   }
 
   @SuppressWarnings("unchecked")
+  public JsonResponse<Object> productFlag(String userId, String productId, Integer qno, Integer flagged) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_qno=").append(qno == null ? 1 : qno).append(",")
+        .append("@p_flagged=").append(flagged == null ? 1 : flagged)
+        .append(";").toString();
+
+      List<Object[]> rows = (List<Object[]>) callProc("productFlag", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("Flag updated");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("productFlag error", e);
+    }
+    return resp;
+  }
+
   public JsonResponse<Object> productSubmit(String userId, String productId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "productSubmit")
-          .setParameter("actionValue", value)
-          .getResultList();
-      resp.setBody(rows != null && !rows.isEmpty() ? rows.get(0) : null);
-      resp.setCode("success"); resp.setMessage("Submitted");
+      List<?> rows = callProc("productSubmit", value);
+      resp.setBody(firstCell(rows)); resp.setCode("success"); resp.setMessage("Submitted");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
       logger.error("productSubmit error", e);
+    }
+    return resp;
+  }
+
+  @SuppressWarnings("unchecked")
+  public JsonResponse<Object> productPalette(String userId, String productId) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
+      List<Object[]> rows = (List<Object[]>) callProc("productPalette", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("productPalette error", e);
+    }
+    return resp;
+  }
+
+  @SuppressWarnings("unchecked")
+  public JsonResponse<Object> productAttemptSummary(String userId, String productId) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
+      List<Object[]> rows = (List<Object[]>) callProc("productAttemptSummary", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("productAttemptSummary error", e);
     }
     return resp;
   }
@@ -145,10 +225,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "resultHeader")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("resultHeader", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -162,10 +239,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "resultBreakdown")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("resultBreakdown", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -175,14 +249,25 @@ public class RestExamDao {
   }
 
   @SuppressWarnings("unchecked")
+  public JsonResponse<Object> resultAnswers(String userId, String productId) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
+      List<Object[]> rows = (List<Object[]>) callProc("resultAnswers", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("resultAnswers error", e);
+    }
+    return resp;
+  }
+
+  @SuppressWarnings("unchecked")
   public JsonResponse<Object> outline(String productId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "outline")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("outline", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -196,10 +281,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "questionList")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("questionList", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -214,10 +296,7 @@ public class RestExamDao {
   public JsonResponse<Object> attempts30d() {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "reportAttempts30d")
-          .setParameter("actionValue", "")
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("reportAttempts30d", "");
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -231,10 +310,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_user_id='" + esc(userId) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "reportUserHistory")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("reportUserHistory", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -248,10 +324,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "',@p_limit=" + (limit == null ? 100 : limit) + ";";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "reportLeaderboard")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("reportLeaderboard", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -274,15 +347,12 @@ public class RestExamDao {
         .append("@p_quiz_description=").append(quizDescription == null ? "NULL" : "'" + esc(quizDescription) + "'").append(",")
         .append("@p_author_name=").append(author == null ? "NULL" : "'" + esc(author) + "'").append(",")
         .append("@p_duration_sec=").append(durationSec == null ? "NULL" : durationSec).append(",")
-        .append("@p_total_marks=").append(totalMarks == null ? "NULL" : esc(totalMarks)).append(",")
+        .append("@p_total_marks=").append(totalMarks == null ? "NULL" : "'" + esc(totalMarks) + "'").append(",")
         .append("@p_max_attempts=").append(maxAttempts == null ? "NULL" : maxAttempts).append(",")
         .append("@p_status=").append(status == null ? "NULL" : "'" + esc(status) + "'")
         .append(";").toString();
 
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "quizUpsert")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("quizUpsert", value);
       resp.setBody(rows != null && !rows.isEmpty() ? rows.get(0) : null);
       resp.setCode("success"); resp.setMessage("Quiz upserted");
     } catch (Exception e) {
@@ -303,10 +373,7 @@ public class RestExamDao {
         .append("@p_map_status=").append(mapStatus == null ? "'ACTIVE'" : "'" + esc(mapStatus) + "'")
         .append(";").toString();
 
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-          .setParameter("actionType", "quizPublish")
-          .setParameter("actionValue", value)
-          .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("quizPublish", value);
       resp.setBody(rows != null && !rows.isEmpty() ? rows.get(0) : null);
       resp.setCode("success"); resp.setMessage("Quiz published");
     } catch (Exception e) {
@@ -320,10 +387,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_quiz_code='" + esc(quizCode) + "';";
-      em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "quizArchive")
-        .setParameter("actionValue", value)
-        .getResultList();
+      callProc("quizArchive", value);
       resp.setCode("success"); resp.setMessage("Archived");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -337,10 +401,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_quiz_code='" + esc(quizCode) + "',@p_to_status='" + esc(toStatus == null ? "DRAFT" : toStatus) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "quizRestore")
-        .setParameter("actionValue", value)
-        .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("quizRestore", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("Restored");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -353,10 +414,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "',@p_quiz_code='" + esc(quizCode) + "',@p_is_primary=" + (isPrimary == null ? 0 : isPrimary) + ",@p_status='" + esc(status == null ? "ACTIVE" : status) + "';";
-      em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "mapAdd")
-        .setParameter("actionValue", value)
-        .getResultList();
+      callProc("mapAdd", value);
       resp.setCode("success"); resp.setMessage("Mapped");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -369,10 +427,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "',@p_quiz_code='" + esc(quizCode) + "';";
-      em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "mapRemove")
-        .setParameter("actionValue", value)
-        .getResultList();
+      callProc("mapRemove", value);
       resp.setCode("success"); resp.setMessage("Removed");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -385,10 +440,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "',@p_quiz_code='" + esc(quizCode) + "',@p_status='" + esc(status == null ? "ACTIVE" : status) + "';";
-      em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "mapSetPrimary")
-        .setParameter("actionValue", value)
-        .getResultList();
+      callProc("mapSetPrimary", value);
       resp.setCode("success"); resp.setMessage("Primary set");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -402,10 +454,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "',@p_status='" + esc(status) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "mapBulkStatus")
-        .setParameter("actionValue", value)
-        .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("mapBulkStatus", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("Bulk status updated");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -419,10 +468,7 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = status == null ? "" : "SET @p_status='" + esc(status) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "quizList")
-        .setParameter("actionValue", value)
-        .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("quizList", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -436,15 +482,18 @@ public class RestExamDao {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = em.createNamedStoredProcedureQuery("lms_exam_routines")
-        .setParameter("actionType", "productQuizzes")
-        .setParameter("actionValue", value)
-        .getResultList();
+      List<Object[]> rows = (List<Object[]>) callProc("productQuizzes", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
       logger.error("productQuizzes error", e);
     }
     return resp;
+  }
+
+  /* ---- tiny holder ---- */
+  private static final class AttemptIdBody {
+    public final Object attemptId;
+    AttemptIdBody(Object id) { this.attemptId = id; }
   }
 }
