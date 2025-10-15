@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -577,80 +578,117 @@ public class RestExamDao {
   }
   
   
-//DAO Method
-@SuppressWarnings("unchecked")
-public ResponseEntity<JsonResponse<Object>> saveQuiz(String quizData, String userId, String org, String orgDiv) {
-   logger.info("method: saveQuiz Starts");
+  @SuppressWarnings("unchecked")
+  public ResponseEntity<JsonResponse<Object>> saveQuiz(String quizData, String userId, String org, String orgDiv) {
+      logger.info("method: saveQuiz Starts");
 
-   JsonResponse<Object> resp = new JsonResponse<>();
-   try {
-       // Validate and clean JSON data
-       ObjectMapper mapper = new ObjectMapper();
-       ObjectNode jsonNode = (ObjectNode) mapper.readTree(quizData);
+      JsonResponse<Object> resp = new JsonResponse<>();
+      ObjectMapper mapper = new ObjectMapper();
+
+      try {
+          // Step 1: Validate JSON format before DB
+          try {
+              mapper.readTree(quizData);
+          } catch (JsonProcessingException e) {
+              throw new RuntimeException("Invalid JSON format: " + e.getMessage());
+          }
+
+          // Step 2: Clean text fields
+          ObjectNode jsonNode = (ObjectNode) mapper.readTree(quizData);
+          String[] textFields = {"question_text", "option_a", "option_b", "option_c", "option_d",
+                                 "rationale_a", "rationale_b", "rationale_c", "rationale_d",
+                                 "syllabus_ref", "section_title", "quiz_code"};
+          for (String field : textFields) {
+              if (jsonNode.has(field)) {
+                  String v = jsonNode.get(field).asText()
+                          .replaceAll("[\\r\\n\\t]+", " ")
+                          .replaceAll("\"", "\\\\\"")
+                          .trim();
+                  jsonNode.put(field, v);
+              }
+          }
+
+          // Step 3: Final cleaned JSON
+          String safeQuizData = mapper.writeValueAsString(jsonNode);
+          // Escape single quotes for MySQL
+          safeQuizData = safeQuizData.replace("'", "''");
+
+          logger.info("✅ Clean JSON for DB: {}", safeQuizData);
+
+          // Step 4: Construct MySQL variable string
+          String value = String.format(
+                  "SET @quizData='%s', @p_userId='%s', @p_org='%s', @p_orgDiv='%s';",
+                  safeQuizData, userId, org, orgDiv
+          );
+          logger.info("Constructed MySQL SET: {}", value);
+
+          // Step 5: Call stored procedure
+          List<?> rows = callProc("saveQuiz", value);
+          resp.setBody(rows);
+          resp.setCode("success");
+          resp.setMessage("Quiz saved successfully");
+
+      } catch (Exception e) {
+          logger.error("Error in saveQuiz: ", e);
+          resp.setCode("Failed");
+          resp.setMessage("Error: " + e.getMessage());
+      }
+
+      ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+      logger.info("method: saveQuiz Ends: {}", response);
+      return response;
+  }
+
+  @SuppressWarnings("unchecked")
+  public JsonResponse<Object> viewQuizConfig(String orgName, String orgDivision) {
+      logger.info("Method : viewQuizConfig starts");
+      JsonResponse<Object> resp = new JsonResponse<Object>();
+
+      try {
+          String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "';";
+          logger.info("Procedure Params: " + value);
+
+          List<?> list = callProc("viewQuizConfig", value);
+
+          resp.setBody(list);
+          resp.setMessage("Data fetched successfully");
+          resp.setCode("success");
+
+      } catch (Exception e) {
+          e.printStackTrace();
+          resp.setMessage("Something went wrong!");
+          resp.setCode("failed");
+      }
+
+      logger.info("Method : viewQuizConfig ends"+resp);
+      return resp;
+  }
+
+  @SuppressWarnings("unchecked")
+  public JsonResponse<Object> editQuizConfig(String quizId,Integer id2, String orgName, String orgDivision) {
+      logger.info("Method : editQuizConfig starts");
+      JsonResponse<Object> resp = new JsonResponse<Object>();
+
+      try {
+    	  String value = "SET @p_quizId='" + quizId + "', @pid2=" + id2 + ";";
+          logger.info("Procedure Params: " + value);
+
        
-       // Clean text fields if necessary (e.g., for excessive escapes in text areas)
-       String[] textFields = {"question_text", "option_a", "option_b", "option_c", "option_d", 
-                              "rationale_a", "rationale_b", "rationale_c", "rationale_d", "syllabus_ref"};
-       for (String field : textFields) {
-           if (jsonNode.has(field)) {
-               String fieldValue = jsonNode.get(field).asText();
-               logger.info("Raw {}: {}", field, fieldValue);
-               // Clean excessive backslashes and escape sequences
-               fieldValue = fieldValue.replaceAll("\\\\{2,}", "").replaceAll("\\\\n", "").replaceAll("\\\\t", "");
-               logger.info("Cleaned {}: {}", field, fieldValue);
-               jsonNode.put(field, fieldValue);
-           }
-       }
-       
-       // Extract quizId early using Jackson for reliability
-       String quizId = "";
-       if (jsonNode.has("quizId") && !jsonNode.get("quizId").isNull()) {
-           quizId = jsonNode.get("quizId").asText();
-           logger.info("Extracted quizId from JSON: " + quizId);
-       } else {
-           logger.info("No quizId found in JSON or quizId is null");
-       }
+          List<?> list = callProc("editQuizConfig", value);
 
-       // Serialize to JSON with proper escaping
-       String safeQuizData = mapper.writeValueAsString(jsonNode);
-       logger.info("Serialized safeQuizData: " + safeQuizData);
-       // Escape single quotes for MySQL (avoid excessive backslash escaping)
-       safeQuizData = safeQuizData.replace("'", "''");
+          resp.setBody(list);
 
-       String value = "SET @quizData='" + safeQuizData + "', @p_userId='" + userId + "', @p_org='" + org
-               + "', @p_orgDiv='" + orgDiv + "';";
-       logger.info("Constructed actionValue: " + value);
+          resp.setBody(list);
+          resp.setMessage("Data fetched successfully");
+          resp.setCode("success");
 
-       // Execute saveQuiz or modifyQuiz based on quizId
-       if (quizId == null || quizId.trim().isEmpty()) {
-           logger.info("Creating new quiz (quizId is null or empty)");
-           em.createNamedStoredProcedureQuery("lms_exam_routines").setParameter("actionType", "saveQuiz")
-                   .setParameter("actionValue", value).execute();
-           resp.setMessage("Quiz created successfully!");
-           resp.setCode("Success");
-       } else {
-           logger.info("Modifying existing quiz with quizId: " + quizId);
-           em.createNamedStoredProcedureQuery("lms_exam_routines")
-                   .setParameter("actionType", "modifyQuiz").setParameter("actionValue", value).execute();
-           resp.setMessage("Quiz modified successfully!");
-           resp.setCode("Success");
-       }
-        
-   } catch (Exception e) {
-       logger.error("Error in saveQuiz: " + e.getMessage());
-       try {
-           String[] err = serverDao.errorProcedureCall(e);
-           resp.setCode("Failed");
-           resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
-       } catch (Exception nestedException) {
-           logger.error("Error while handling exception: " + nestedException.getMessage());
-           resp.setCode("Failed");
-           resp.setMessage("Oops! Something went wrong during error handling");
-       }
-   }
+      } catch (Exception e) {
+          e.printStackTrace();
+          resp.setMessage("Something went wrong!");
+          resp.setCode("failed");
+      }
 
-   ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
-   logger.info("method: saveQuiz Ends: " + response);
-   return response;
-}
+      logger.info("Method : editQuizConfig ends");
+      return resp;
+  }
 }

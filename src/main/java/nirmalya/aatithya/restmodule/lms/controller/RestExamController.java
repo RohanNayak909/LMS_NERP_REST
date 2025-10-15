@@ -265,6 +265,25 @@ public ResponseEntity<JsonResponse<Object>> saveQuiz(@RequestBody String quizDat
    return dao.saveQuiz(quizData, userId, org, orgDiv);
 }
   
+
+
+@GetMapping("rest-viewQuizConfig")
+public JsonResponse<Object> viewQuizConfig(@RequestParam String orgName, @RequestParam String orgDivision) {
+	logger.info("Method :viewQuiz starts");
+	   logger.info("Method :viewQuiz endss");
+    return dao.viewQuizConfig(orgName, orgDivision);
+}
+
+@GetMapping("rest-editQuizConfig")
+public JsonResponse<Object> editQuizConfig(@RequestParam String id,
+		                                   @RequestParam Integer id2,
+                                           @RequestParam String organization,
+                                           @RequestParam String orgDivision
+                                           ) {
+	logger.info("Method :editQuiz starts");
+	   logger.info("Method :editQuiz endss");
+    return dao.editQuizConfig(id,id2, organization, orgDivision);
+}
 }
 // DELIMITER $$
 
@@ -1110,3 +1129,7 @@ public ResponseEntity<JsonResponse<Object>> saveQuiz(@RequestBody String quizDat
 // END $$
 
 // DELIMITER ;
+
+
+
+

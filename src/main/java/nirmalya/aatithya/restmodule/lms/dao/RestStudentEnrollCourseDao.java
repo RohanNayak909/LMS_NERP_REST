@@ -151,12 +151,14 @@ import org.json.JSONObject;
 	        String city = jsonObj.optString("city");
 	        String zip = jsonObj.optString("zip");
 	        String paymentMethod = jsonObj.optString("paymentMethod");
-
+	        String trainingId = jsonObj.optString("trainingId");
+	        
 	        JSONObject cardInfo = jsonObj.optJSONObject("cardInfo");
 	        String cardNumber = cardInfo != null ? cardInfo.optString("cardNumber") : "";
 	        String expiryDate = cardInfo != null ? cardInfo.optString("expiryDate") : "";
 	        String cvv = cardInfo != null ? cardInfo.optString("cvv") : "";
-
+	       
+logger.info("ddddd"+trainingId);
 	        // Loop through productIds
 	        for (int i = 0; i < productIds.length(); i++) {
 	            String productId = productIds.getString(i);
@@ -173,14 +175,16 @@ import org.json.JSONObject;
 	                    "', @p_productId='" + productId +
 	                    "', @p_cardNumber='" + cardNumber +
 	                    "', @p_expiryDate='" + expiryDate +
-	                    "', @p_cvv='" + cvv + "';";
+	                    "', @p_cvv='" + cvv +
+	                    "', @p_trainingId='" +trainingId+"';";
 
 	            logger.info("value for saveEnrollmentData: " + value);
 
-	            em.createNamedStoredProcedureQuery("coupon_management_Routines")
-	                    .setParameter("actionType", "saveEnrolmentData")
-	                    .setParameter("actionValue", value)
-	                    .execute();
+				
+				  em.createNamedStoredProcedureQuery("coupon_management_Routines")
+				  .setParameter("actionType", "saveEnrolmentData") .setParameter("actionValue",
+				  value) .execute();
+				 
 	        }
 
 	        resp.setCode("success");
