@@ -49,41 +49,41 @@ import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 	//     return promotionMarketingRestDao.addCoupon(couponJsonData);
 	// }
 
- @PostMapping("rest-addCoupon")
-    public JsonResponse<Object> addCoupon(@RequestBody Map<String, Object> requestJsonData) {
-        logger.info("Method : addCoupon starts");
-        logger.info("Received payload: {}", requestJsonData);
+	@PostMapping("rest-addCoupon")
+	public JsonResponse<Object> addCoupon(@RequestBody Map<String, Object> requestJsonData) {
+	    logger.info("Method : addCoupon starts");
+	    logger.info("Received payload: {}", requestJsonData);
 
-        JsonResponse<Object> response = new JsonResponse<>();
+	    JsonResponse<Object> response = new JsonResponse<>();
 
-        try {
-            // Basic validation
-            if (requestJsonData == null || requestJsonData.isEmpty()) {
-                logger.error("Request payload is null or empty");
-                response.setCode("error");
-                response.setMessage("Request data cannot be empty.");
-                return response;
-            }
+	    try {
+	        // Basic validation
+	        if (requestJsonData == null || requestJsonData.isEmpty()) {
+	            logger.error("Request payload is null or empty");
+	            response.setCode("error");
+	            response.setMessage("Request data cannot be empty.");
+	            return response;
+	        }
 
-            String type = (String) requestJsonData.get("type");
-            if (type == null || (!type.equals("coupon") && !type.equals("marketing"))) {
-                logger.error("Invalid or missing type: {}", type);
-                response.setCode("error");
-                response.setMessage("Invalid type. Must be 'coupon' or 'marketing'.");
-                return response;
-            }
+	        String type = (String) requestJsonData.get("type");
+	        if (type == null || (!type.equals("coupon") && !type.equals("marketing"))) {
+	            logger.error("Invalid or missing type: {}", type);
+	            response.setCode("error");
+	            response.setMessage("Invalid type. Must be 'coupon' or 'marketing'.");
+	            return response;
+	        }
 
-            // Delegate to DAO
-            response = promotionMarketingRestDao.savePromotionMarketing(requestJsonData);
-        } catch (Exception e) {
-            logger.error("Error in addCoupon: ", e);
-            response.setCode("error");
-            response.setMessage("Failed to save data: " + e.getMessage());
-        }
+	        // Delegate to DAO
+	        response = promotionMarketingRestDao.savePromotionMarketing(requestJsonData);
+	    } catch (Exception e) {
+	        logger.error("Error in addCoupon: ", e);
+	        response.setCode("error");
+	        response.setMessage("Failed to save data: " + e.getMessage());
+	    }
 
-        logger.info("Method : addCoupon ends");
-        return response;
-    }
+	    logger.info("Method : addCoupon ends");
+	    return response;
+	}
 
 
 
