@@ -11,7 +11,7 @@ import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
 import nirmalya.aatithya.restmodule.lms.dao.RestExamDao;
 
 @RestController
-@RequestMapping(value = { "master/" })
+@RequestMapping(value = { "master" }) // avoid double slash when joining
 @CrossOrigin(origins = "*")
 public class RestExamController {
 
@@ -22,16 +22,16 @@ public class RestExamController {
 
   /* ======================= RUNTIME ======================= */
 
-  @RequestMapping(value = "rest-exam-eligibilitys", method = { RequestMethod.GET })
+  @GetMapping("rest-exam-eligibilitys")
   public JsonResponse<Object> eligibility(
       @RequestParam String userId,
       @RequestParam String productId,
       @RequestParam(required = false, defaultValue = "MOCK") String mode) {
-        logger.info("dddd",productId);
+    logger.info("rest-exam-eligibilitys user='{}' product='{}' mode='{}'", userId, productId, mode);
     return dao.eligibility(userId, productId, mode);
   }
 
-  @RequestMapping(value = "rest-exam-start", method = { RequestMethod.POST })
+  @PostMapping("rest-exam-start")
   public ResponseEntity<JsonResponse<Object>> start(
       @RequestParam String orgName,
       @RequestParam String orgDivision,
@@ -41,7 +41,8 @@ public class RestExamController {
       @RequestParam(required = false) Integer seed,
       @RequestParam(required = false) String metaJson
   ) {
-    logger.info("rest-exam-start org='{}' div='{}' user='{}' product='{}'", orgName, orgDivision, userId, productId);
+    logger.info("rest-exam-start org='{}' div='{}' user='{}' product='{}' mode='{}'",
+        orgName, orgDivision, userId, productId, mode);
     JsonResponse<Object> res = dao.productStart(orgName, orgDivision, userId, productId, mode, seed, metaJson);
     if ("ATTEMPT_LIMIT".equalsIgnoreCase(res.getCode())) {
       return ResponseEntity.status(HttpStatus.CONFLICT).body(res); // 409
@@ -52,7 +53,7 @@ public class RestExamController {
     return ResponseEntity.ok(res); // 200
   }
 
-  @RequestMapping(value = "rest-exam-get-question", method = { RequestMethod.GET })
+  @GetMapping("rest-exam-get-question")
   public JsonResponse<Object> getQuestion(
       @RequestParam String userId,
       @RequestParam String productId,
@@ -60,7 +61,7 @@ public class RestExamController {
     return dao.productGetQuestion(userId, productId, qno);
   }
 
-  @RequestMapping(value = "rest-exam-answer", method = { RequestMethod.POST })
+  @PostMapping("rest-exam-answer")
   public JsonResponse<Object> answer(
       @RequestParam String userId,
       @RequestParam String productId,
@@ -71,7 +72,7 @@ public class RestExamController {
     return dao.productAnswer(userId, productId, qno, selected, subjective, timeSpentSec);
   }
 
-  @RequestMapping(value = "rest-exam-flag", method = { RequestMethod.POST })
+  @PostMapping("rest-exam-flag")
   public JsonResponse<Object> flag(
       @RequestParam String userId,
       @RequestParam String productId,
@@ -80,71 +81,71 @@ public class RestExamController {
     return dao.productFlag(userId, productId, qno, flagged);
   }
 
-  @RequestMapping(value = "rest-exam-submit", method = { RequestMethod.POST })
+  @PostMapping("rest-exam-submit")
   public JsonResponse<Object> submit(
       @RequestParam String userId,
       @RequestParam String productId) {
     return dao.productSubmit(userId, productId);
   }
 
-  @RequestMapping(value = "rest-exam-palette", method = { RequestMethod.GET })
+  @GetMapping("rest-exam-palette")
   public JsonResponse<Object> palette(
       @RequestParam String userId,
       @RequestParam String productId) {
     return dao.productPalette(userId, productId);
   }
 
-  @RequestMapping(value = "rest-exam-attempt-summary", method = { RequestMethod.GET })
+  @GetMapping("rest-exam-attempt-summary")
   public JsonResponse<Object> attemptSummary(
       @RequestParam String userId,
       @RequestParam String productId) {
     return dao.productAttemptSummary(userId, productId);
   }
 
-  @RequestMapping(value = "rest-exam-result-header", method = { RequestMethod.GET })
+  @GetMapping("rest-exam-result-header")
   public JsonResponse<Object> resultHeader(
       @RequestParam String userId,
       @RequestParam String productId) {
     return dao.resultHeader(userId, productId);
   }
 
-  @RequestMapping(value = "rest-exam-result-breakdown", method = { RequestMethod.GET })
+  @GetMapping("rest-exam-result-breakdown")
   public JsonResponse<Object> resultBreakdown(
       @RequestParam String userId,
       @RequestParam String productId) {
     return dao.resultBreakdown(userId, productId);
   }
 
-  @RequestMapping(value = "rest-exam-result-answers", method = { RequestMethod.GET })
+  @GetMapping("rest-exam-result-answers")
   public JsonResponse<Object> resultAnswers(
       @RequestParam String userId,
       @RequestParam String productId) {
     return dao.resultAnswers(userId, productId);
   }
 
-  @RequestMapping(value = "rest-product-outline", method = { RequestMethod.GET })
+  @GetMapping("rest-product-outline")
   public JsonResponse<Object> outline(@RequestParam String productId) {
     return dao.outline(productId);
   }
 
-  @RequestMapping(value = "rest-product-questions", method = { RequestMethod.GET })
+  @GetMapping("rest-product-questions")
   public JsonResponse<Object> questions(@RequestParam String productId) {
     return dao.questionList(productId);
   }
 
   /* ======================= REPORTS ======================= */
 
-  @RequestMapping(value = "rest-report-attempts-30d", method = { RequestMethod.GET })
+  @GetMapping("rest-report-attempts-30d")
   public JsonResponse<Object> attempts30d() {
     return dao.attempts30d();
   }
 
-  @RequestMapping(value = "rest-report-user-history", method = { RequestMethod.GET })
+  @GetMapping("rest-report-user-history")
   public JsonResponse<Object> userHistory(@RequestParam String userId) {
     return dao.userHistory(userId);
   }
 
-  @RequestMapping(value = "rest-report-leaderboard", method = { RequestMethod.GET })
+  @GetMapping("rest-report-leaderboard")
   public JsonResponse<Object> leaderboard(
       @RequestParam String productId,
       @RequestParam(required = false) Integer limit) {
@@ -153,7 +154,7 @@ public class RestExamController {
 
   /* ============== ADMIN / PUBLISH / MAPPING / QUESTIONS ============== */
 
-  @RequestMapping(value = "rest-quiz-upsert", method = { RequestMethod.POST })
+  @PostMapping("rest-quiz-upsert")
   public JsonResponse<Object> quizUpsert(
       @RequestParam String quizCode,
       @RequestParam String quizTitle,
@@ -166,7 +167,7 @@ public class RestExamController {
     return dao.quizUpsert(quizCode, quizTitle, quizDescription, authorName, durationSec, totalMarks, maxAttempts, status);
   }
 
-  @RequestMapping(value = "rest-quiz-publish", method = { RequestMethod.POST })
+  @PostMapping("rest-quiz-publish")
   public JsonResponse<Object> quizPublish(
       @RequestParam String quizCode,
       @RequestParam(required = false) String productId,
@@ -175,19 +176,19 @@ public class RestExamController {
     return dao.quizPublish(quizCode, productId, isPrimary, mapStatus);
   }
 
-  @RequestMapping(value = "rest-quiz-archive", method = { RequestMethod.POST })
+  @PostMapping("rest-quiz-archive")
   public JsonResponse<Object> quizArchive(@RequestParam String quizCode) {
     return dao.quizArchive(quizCode);
   }
 
-  @RequestMapping(value = "rest-quiz-restore", method = { RequestMethod.POST })
+  @PostMapping("rest-quiz-restore")
   public JsonResponse<Object> quizRestore(
       @RequestParam String quizCode,
       @RequestParam(required = false) String toStatus) {
     return dao.quizRestore(quizCode, toStatus);
   }
 
-  @RequestMapping(value = "rest-map-add", method = { RequestMethod.POST })
+  @PostMapping("rest-map-add")
   public JsonResponse<Object> mapAdd(
       @RequestParam String productId,
       @RequestParam String quizCode,
@@ -196,14 +197,14 @@ public class RestExamController {
     return dao.mapAdd(productId, quizCode, isPrimary, status);
   }
 
-  @RequestMapping(value = "rest-map-remove", method = { RequestMethod.POST })
+  @PostMapping("rest-map-remove")
   public JsonResponse<Object> mapRemove(
       @RequestParam String productId,
       @RequestParam String quizCode) {
     return dao.mapRemove(productId, quizCode);
   }
 
-  @RequestMapping(value = "rest-map-set-primary", method = { RequestMethod.POST })
+  @PostMapping("rest-map-set-primary")
   public JsonResponse<Object> mapPrimary(
       @RequestParam String productId,
       @RequestParam String quizCode,
@@ -211,26 +212,26 @@ public class RestExamController {
     return dao.mapSetPrimary(productId, quizCode, status);
   }
 
-  @RequestMapping(value = "rest-map-bulk-status", method = { RequestMethod.POST })
+  @PostMapping("rest-map-bulk-status")
   public JsonResponse<Object> mapBulkStatus(
       @RequestParam String productId,
       @RequestParam String status) {
     return dao.mapBulkStatus(productId, status);
   }
 
-  @RequestMapping(value = "rest-quiz-list", method = { RequestMethod.GET })
+  @GetMapping("rest-quiz-list")
   public JsonResponse<Object> quizList(@RequestParam(required = false) String status) {
     return dao.quizList(status);
   }
 
-  @RequestMapping(value = "rest-product-quizzes", method = { RequestMethod.GET })
+  @GetMapping("rest-product-quizzes")
   public JsonResponse<Object> productQuizzes(@RequestParam String productId) {
     return dao.productQuizzes(productId);
   }
 
   /* ===== ADMIN: QUESTIONS ===== */
 
-  @RequestMapping(value = "rest-question-upsert", method = { RequestMethod.POST })
+  @PostMapping("rest-question-upsert")
   public JsonResponse<Object> questionUpsert(
       @RequestParam String quizCode,
       @RequestParam(required = false) String sectionTitle,
@@ -249,20 +250,28 @@ public class RestExamController {
         optionA, optionB, optionC, optionD, rightAnswer, rationaleA, rationaleB, rationaleC, rationaleD);
   }
 
-  @RequestMapping(value = "rest-question-bulk-import", method = { RequestMethod.POST })
-  public JsonResponse<Object> questionBulkImport(
-      @RequestBody String bulkJson) {
+  @PostMapping("rest-question-bulk-import")
+  public JsonResponse<Object> questionBulkImport(@RequestBody String bulkJson) {
     return dao.questionBulkImportSimple(bulkJson);
   }
-  
-  
-//Rest Controller Method
-@PostMapping(value = "rest-quiz-config-add")
-public ResponseEntity<JsonResponse<Object>> saveQuiz(@RequestBody String quizData, @RequestParam String userId,
-       @RequestParam String org, @RequestParam String orgDiv) {
-   logger.info("Method :saveQuiz starts");
-   logger.info("Method :saveQuiz endss");
-   return dao.saveQuiz(quizData, userId, org, orgDiv);
+
+  @PostMapping("rest-quiz-config-add")
+  public ResponseEntity<JsonResponse<Object>> saveQuiz(
+      @RequestBody String quizData,
+      @RequestParam String userId,
+      @RequestParam String org,
+      @RequestParam String orgDiv) {
+    logger.info("rest-quiz-config-add user='{}' org='{}' div='{}'", userId, org, orgDiv);
+    return dao.saveQuiz(quizData, userId, org, orgDiv);
+  }
+
+  @PostMapping("rest-exam-abort")
+  public JsonResponse<Object> abort(
+      @RequestParam String userId,
+      @RequestParam String productId,
+      @RequestParam(required = false, defaultValue = "MOCK") String mode) {
+    return dao.productAbort(userId, productId, mode);
+  }
 }
   
 
