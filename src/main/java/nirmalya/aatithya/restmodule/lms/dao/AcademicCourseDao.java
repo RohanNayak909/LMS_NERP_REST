@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -222,6 +223,28 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> coursequiz(String orgName, String orgDivision) {
+		logger.info("Method : coursequiz Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "';";
+			logger.info("valuej"+value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "viewcoursequiz").setParameter("actionValue", value).getResultList();
+			resp.setBody(list);
+			logger.info("quizz" + list);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		logger.info("Method : coursequiz Dao ends");
+		return resp;
+
+	}
+	
 	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> viewtraining(String orgName, String orgDivision,String id) {
@@ -883,4 +906,84 @@ public class AcademicCourseDao {
 
 	}
 
+	
+	
+	// DAO Method (e.g., in AcademicCourseDao.java)
+	@SuppressWarnings("unchecked")
+	public ResponseEntity<JsonResponse<Object>> saveQuizMappings(String quizData, String userId, String org, String orgDiv) {
+	    logger.info("method: saveQuizMappings Starts"+quizData);
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+	    try {
+	        // Validate and clean JSON data
+	        ObjectMapper mapper = new ObjectMapper();
+	        ObjectNode jsonNode = (ObjectNode) mapper.readTree(quizData);
+	        
+	        // Extract courseId early using Jackson for reliability
+	        String courseId = "";
+	        if (jsonNode.has("courseId") && !jsonNode.get("courseId").isNull()) {
+	            courseId = jsonNode.get("courseId").asText();
+	            logger.info("Extracted courseId from JSON: " + courseId);
+	        } else {
+	            logger.info("No courseId found in JSON or courseId is null");
+	            resp.setCode("Failed");
+	            resp.setMessage("Course ID is required to save quiz mappings.");
+	            return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+	        }
+
+	        // Optional: Clean quizMappings array if any text fields need processing
+	        // (e.g., if future extensions add descriptions; for now, minimal validation)
+	        if (jsonNode.has("quizMappings")) {
+	            ArrayNode mappingsArray = (ArrayNode) jsonNode.get("quizMappings");
+	            for (JsonNode mapping : mappingsArray) {
+	                // Validate structure (courseId, quizCode, status)
+	                if (!mapping.has("courseId") || !mapping.has("quizCode") || !mapping.has("status")) {
+	                    logger.error("Invalid mapping structure in quizMappings");
+	                    resp.setCode("Failed");
+	                    resp.setMessage("Invalid quiz mapping structure.");
+	                    return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+	                }
+	                // Example cleaning for hypothetical text field
+	                // if (mapping.has("quizDesc")) { ... similar to courseDesc in saveCourse }
+	            }
+	        }
+
+	        // Serialize to JSON with proper escaping
+	        String safeQuizData = mapper.writeValueAsString(jsonNode);
+	        logger.info("Serialized safeQuizData: " + safeQuizData);
+	        // Escape single quotes for MySQL (avoid excessive backslash escaping)
+	        safeQuizData = safeQuizData.replace("'", "''");
+
+	        String value = "SET @quizData='" + safeQuizData + "', @p_userId='" + userId + "', @p_org='" + org
+	                + "', @p_orgDiv='" + orgDiv + "';";
+	        logger.info("Constructed actionValue: " + value);
+
+	        // Execute stored procedure for saving/updating quiz mappings
+	        // Assumes stored procedure handles insert/update/delete based on provided mappings
+	        // (e.g., delete existing mappings for courseId, then insert new ones)
+	        logger.info("Saving quiz mappings for courseId: " + courseId);
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", "saveCourseQuizMappings")
+	                .setParameter("actionValue", value)
+	                .execute();
+	        resp.setMessage("Quiz mappings saved successfully!");
+	        resp.setCode("Success");
+	         
+	    } catch (Exception e) {
+	        logger.error("Error in saveQuizMappings: " + e.getMessage());
+	        try {
+	            String[] err = serverDao.errorProcedureCall(e);
+	            resp.setCode("Failed");
+	            resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
+	        } catch (Exception nestedException) {
+	            logger.error("Error while handling exception: " + nestedException.getMessage());
+	            resp.setCode("Failed");
+	            resp.setMessage("Oops! Something went wrong during error handling");
+	        }
+	    }
+
+	    ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+	    logger.info("method: saveQuizMappings Ends: " + response);
+	    return response;
+	}
 }

@@ -62,6 +62,13 @@ public class RestAcademicCourseController {
 		logger.info("Method :viewCourse endss");
 		return academicCourseDao.viewCourse(orgName, orgDivision);
 	}
+	
+	@RequestMapping(value = "rest-coursequiz", method = { RequestMethod.GET })
+	public JsonResponse<Object> coursequiz(@RequestParam String orgName, @RequestParam String orgDivision) {
+		logger.info("Method :coursequiz start");
+		logger.info("Method :coursequiz endss");
+		return academicCourseDao.coursequiz(orgName, orgDivision);
+	}
 
 	
 	@RequestMapping(value = "rest-viewtraining", method = { RequestMethod.GET })
@@ -236,6 +243,14 @@ public class RestAcademicCourseController {
 		return academicCourseDao.getadminAllHeadCount(orgName,orgDivision,userId);
 
 	}
+	
+	@PostMapping(value = "rest-academic-course-quiz-save")
+    public ResponseEntity<JsonResponse<Object>> saveQuizMappings(@RequestBody String quizData, @RequestParam String userId,
+            @RequestParam String org, @RequestParam String orgDiv) {
+        logger.info("Method :saveQuizMappings starts"+quizData);
+        logger.info("Method :saveQuizMappings endss");
+        return academicCourseDao.saveQuizMappings(quizData, userId, org, orgDiv);
+    }
 	
 
 }
