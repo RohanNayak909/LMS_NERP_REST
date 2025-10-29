@@ -33,7 +33,7 @@ import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 	
 // View
 	@RequestMapping(value = "rest-viewCoupon", method = { RequestMethod.GET })
-	public JsonResponse<Object> viewCoupon(@RequestParam String orgName, String orgDivision) {
+	public JsonResponse<Object> viewCoupon(@RequestParam String orgName,@RequestParam String orgDivision) {
 		logger.info("Method :viewCoupon start");
 
 		logger.info("Method :viewCoupon endss");
@@ -125,3 +125,4 @@ import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 
 		}
 }
+
