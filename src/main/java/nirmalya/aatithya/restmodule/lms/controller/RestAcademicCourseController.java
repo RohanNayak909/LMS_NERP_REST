@@ -217,6 +217,16 @@ public class RestAcademicCourseController {
 
 	}
 	
+	@RequestMapping(value = "rest-getAllUserTraining", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllUserTraining(@RequestParam String orgName ,@RequestParam String orgDivision
+			,@RequestParam String userId,@RequestParam String id) {
+		logger.info("Method :getAllUserTraining start");
+
+		logger.info("Method :getAllUserTraining endss");
+		return academicCourseDao.getAllUserTraining(orgName,orgDivision,userId,id);
+
+	}
+	
 	@RequestMapping(value = "rest-editCourseDetails", method = { RequestMethod.GET })
 	public JsonResponse<Object> editCourseDetails(@RequestParam String Id, @RequestParam String organization,
 			@RequestParam String orgDivision) {
@@ -224,6 +234,16 @@ public class RestAcademicCourseController {
 		logger.info("Method :editCourseDetails endss");
 		return academicCourseDao.editCourseDetails(Id, organization, orgDivision);
 	}
+	
+	
+	@RequestMapping(value = "rest-editCourseTrainingDetails", method = { RequestMethod.GET })
+	public JsonResponse<Object> editCourseTrainingDetails(@RequestParam String Id, @RequestParam String organization,
+			@RequestParam String orgDivision) {
+		logger.info("Method :editCourseTrainingDetails start");
+		logger.info("Method :editCourseTrainingDetails endss");
+		return academicCourseDao.editCourseTrainingDetails(Id, organization, orgDivision);
+	}
+	
 	
 	@PostMapping(value = "rest-academic-course-duration-add")
 	public ResponseEntity<JsonResponse<Object>> saveCourseDuration(@RequestBody String data, @RequestParam String userId,

@@ -167,14 +167,22 @@ public class AcademicCourseDao {
 	        // ✅ Convert full JSON object to string
 	        String safePayload = gson.toJson(jsonObject);
 
+	        // ✅ Escape backslashes for MySQL string literal (double them to preserve JSON escapes)
+	        safePayload = safePayload.replace("\\", "\\\\");
+
 	        // ✅ Escape single quotes for SQL string literal
 	        safePayload = safePayload.replace("'", "''");
 
+	        // ✅ Escape parameters for SQL
+	        String escapedUserId = userId.replace("'", "''");
+	        String escapedOrg = org.replace("'", "''");
+	        String escapedOrgDiv = orgDiv.replace("'", "''");
+
 	        // ✅ Construct SET @data for MySQL
 	        String actionValue = "SET @data='" + safePayload + "', " +
-	                             "@p_userId='" + userId + "', " +
-	                             "@p_org='" + org + "', " +
-	                             "@p_orgDiv='" + orgDiv + "';";
+	                             "@p_userId='" + escapedUserId + "', " +
+	                             "@p_org='" + escapedOrg + "', " +
+	                             "@p_orgDiv='" + escapedOrgDiv + "';";
 
 	        logger.info("Constructed actionValue for MySQL: " + actionValue);
 
@@ -200,7 +208,6 @@ public class AcademicCourseDao {
 	    logger.info("method: saveTraining Ends " + response);
 	    return response;
 	}
-
 
 	// view
 	@SuppressWarnings("unchecked")
@@ -738,6 +745,36 @@ public class AcademicCourseDao {
 
 	}
 	
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getAllUserTraining(String orgName, String orgDivision, String userId,String id) {
+		logger.info("Method : getAllUserTraining Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_userId='" + userId + "' ,@p_id='" + id + "';";
+			
+			logger.info(value);
+			
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "getAllUserTraining").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getAllUserTraining Dao ends" + resp);
+		return resp;
+
+	}
+	
+	
+	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> editCourseDetails(String Id, String organization, String orgDivision) {
 		logger.info("Method : editCourseDetails Dao starts");
@@ -758,6 +795,31 @@ public class AcademicCourseDao {
 			resp.setMessage("Something Went Wrong !");
 		}
 		logger.info("Method : editCourseDetails Dao ends" + resp);
+		return resp;
+
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> editCourseTrainingDetails(String Id, String organization, String orgDivision) {
+		logger.info("Method : editCourseTrainingDetails Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_courseId='" + Id + "';";
+
+			logger.info("vvvv" + value);
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "editCourseTrainingDetails").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data Fetched successfully");
+		} catch (Exception e) {
+			e.printStackTrace();
+			resp.setMessage("Something Went Wrong !");
+		}
+		logger.info("Method : editCourseTrainingDetails Dao ends" + resp);
 		return resp;
 
 	}
