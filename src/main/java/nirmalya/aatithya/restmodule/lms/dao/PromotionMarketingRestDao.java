@@ -207,6 +207,7 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 		            String endDate = (String) requestJsonData.get("endDate");
 		            String status = (String) requestJsonData.get("status");
 		            String documentName = (String) requestJsonData.get("documentName"); // Extract document name if present
+                    String description = (String) requestJsonData.get("description");
 
 		            // Build stored procedure parameters
 		            StringBuilder valueBuilder = new StringBuilder("SET @p_orgName='" + orgName + "', " +
@@ -222,6 +223,10 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 		            if (!StringUtil.isNull(documentName)) {
 		                valueBuilder.append(", @p_documentName='" + documentName + "'");
 		            }
+
+                    if (!StringUtil.isNull(description)) {
+        valueBuilder.append(", @p_description='" + description + "'");
+    }
 		            
 		            String value = valueBuilder.toString() + ";";
 
