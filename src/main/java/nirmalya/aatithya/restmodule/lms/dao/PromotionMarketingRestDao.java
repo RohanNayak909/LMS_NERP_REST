@@ -351,5 +351,41 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 			return resp;
 
 		}
+
+
+
+		// ---------------------------------------------NEW------------------------------------------
+
+
+
+		@SuppressWarnings("unchecked")
+		public JsonResponse<Object> getAllProductDetailsnew() {
+			logger.info("Method : getAllProductDetailsnew Dao starts");
+
+			JsonResponse<Object> resp = new JsonResponse<Object>();
+
+			try {
+
+				List<Object[]> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+						.setParameter("actionType", "getAllProductDetailsnew").setParameter("actionValue", "")
+						.getResultList();
+				resp.setBody(x);
+
+				resp.setCode("success");
+				resp.setMessage("Data fetched successfully");
+			} catch (Exception e) {
+				resp.setCode("failed");
+				resp.setMessage(e.getMessage());
+				e.printStackTrace();
+			}
+
+			logger.info("Method : getAllProductDetailsnew Dao ends");
+
+			return resp;
+
+		}
+
+
+		
 		
 }

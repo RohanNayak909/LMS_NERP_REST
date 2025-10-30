@@ -124,4 +124,16 @@ import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 			return promotionMarketingRestDao.getAllProductDetails();
 
 		}
+
+
+
+
+		@GetMapping(value = "rest-get-all-product-details-new")
+		public JsonResponse<Object> getAllProductDetailsnew() {
+			logger.info("Method :getAllProductDetailsnew start");
+
+			logger.info("Method :getAllProductDetailsnew ends");
+			return promotionMarketingRestDao.getAllProductDetailsnew();
+
+		}
 }
