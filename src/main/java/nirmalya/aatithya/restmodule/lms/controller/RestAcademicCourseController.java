@@ -62,6 +62,13 @@ public class RestAcademicCourseController {
 		logger.info("Method :viewCourse endss");
 		return academicCourseDao.viewCourse(orgName, orgDivision);
 	}
+	
+	@RequestMapping(value = "rest-coursequiz", method = { RequestMethod.GET })
+	public JsonResponse<Object> coursequiz(@RequestParam String orgName, @RequestParam String orgDivision) {
+		logger.info("Method :coursequiz start");
+		logger.info("Method :coursequiz endss");
+		return academicCourseDao.coursequiz(orgName, orgDivision);
+	}
 
 	
 	@RequestMapping(value = "rest-viewtraining", method = { RequestMethod.GET })
@@ -210,6 +217,16 @@ public class RestAcademicCourseController {
 
 	}
 	
+	@RequestMapping(value = "rest-getAllUserTraining", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllUserTraining(@RequestParam String orgName ,@RequestParam String orgDivision
+			,@RequestParam String userId,@RequestParam String id) {
+		logger.info("Method :getAllUserTraining start");
+
+		logger.info("Method :getAllUserTraining endss");
+		return academicCourseDao.getAllUserTraining(orgName,orgDivision,userId,id);
+
+	}
+	
 	@RequestMapping(value = "rest-editCourseDetails", method = { RequestMethod.GET })
 	public JsonResponse<Object> editCourseDetails(@RequestParam String Id, @RequestParam String organization,
 			@RequestParam String orgDivision) {
@@ -217,6 +234,16 @@ public class RestAcademicCourseController {
 		logger.info("Method :editCourseDetails endss");
 		return academicCourseDao.editCourseDetails(Id, organization, orgDivision);
 	}
+	
+	
+	@RequestMapping(value = "rest-editCourseTrainingDetails", method = { RequestMethod.GET })
+	public JsonResponse<Object> editCourseTrainingDetails(@RequestParam String Id, @RequestParam String organization,
+			@RequestParam String orgDivision) {
+		logger.info("Method :editCourseTrainingDetails start");
+		logger.info("Method :editCourseTrainingDetails endss");
+		return academicCourseDao.editCourseTrainingDetails(Id, organization, orgDivision);
+	}
+	
 	
 	@PostMapping(value = "rest-academic-course-duration-add")
 	public ResponseEntity<JsonResponse<Object>> saveCourseDuration(@RequestBody String data, @RequestParam String userId,
@@ -236,6 +263,14 @@ public class RestAcademicCourseController {
 		return academicCourseDao.getadminAllHeadCount(orgName,orgDivision,userId);
 
 	}
+	
+	@PostMapping(value = "rest-academic-course-quiz-save")
+    public ResponseEntity<JsonResponse<Object>> saveQuizMappings(@RequestBody String quizData, @RequestParam String userId,
+            @RequestParam String org, @RequestParam String orgDiv) {
+        logger.info("Method :saveQuizMappings starts"+quizData);
+        logger.info("Method :saveQuizMappings endss");
+        return academicCourseDao.saveQuizMappings(quizData, userId, org, orgDiv);
+    }
 	
 
 }
