@@ -175,10 +175,12 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/patient/**").permitAll()
 				.antMatchers("/hotel/**").permitAll()
 				.antMatchers("/his/rest-editCourseDetails").permitAll()
+				.antMatchers("/his/rest-editCourseTrainingDetails").permitAll()
+				
+				.antMatchers("/his/rest-getAllUserTraining").permitAll()
 				
 				.antMatchers("/user/getUserByUsernameLMS").permitAll()
 				
-				.antMatchers("/user/getUserByUsernameLMS").permitAll()
                 
                 .antMatchers("/master/rest-save-enrollment-data").permitAll()
                 
