@@ -49,7 +49,7 @@ public class AcademicCourseDao {
 	@SuppressWarnings("unchecked")
 	public ResponseEntity<JsonResponse<Object>> saveCourse(String courseData, String userId, String org, String orgDiv) {
 	    logger.info("method: saveCourse Starts");
-
+ 
 	    JsonResponse<Object> resp = new JsonResponse<>();
 	    try {
 	        // Validate and clean JSON data
@@ -79,19 +79,19 @@ public class AcademicCourseDao {
 	        } else {
 	            logger.info("No courseId found in JSON or courseId is null");
 	        }
-
+ 
 	        // Serialize to JSON with proper escaping
 	        String safeCourseData = mapper.writeValueAsString(jsonNode);
 	        logger.info("Serialized safeCourseData: " + safeCourseData);
 	        // Escape single quotes for MySQL (avoid excessive backslash escaping)
 	        safeCourseData = safeCourseData.replace("'", "''");
-
+ 
 	        String value = "SET @courseData='" + safeCourseData + "', @p_userId='" + userId + "', @p_org='" + org
 	                + "', @p_orgDiv='" + orgDiv + "';";
 	        logger.info("Constructed actionValue: " + value);
-
+ 
 	        // Execute saveCourse or modifyCourse based on courseId
-
+ 
 			if (courseId == null || courseId.trim().isEmpty()) {
 				logger.info("Creating new course (courseId is null or empty)");
 				em.createNamedStoredProcedureQuery("academic_course_routines").setParameter("actionType", "saveCourse")
@@ -105,7 +105,7 @@ public class AcademicCourseDao {
 				resp.setMessage("Course modified successfully!");
 				resp.setCode("Success");
 			}
-			 
+			
 	    } catch (Exception e) {
 	        logger.error("Error in saveCourse: " + e.getMessage()); // Changed from info to error for severity
 	        try {
@@ -118,11 +118,13 @@ public class AcademicCourseDao {
 	            resp.setMessage("Oops! Something went wrong during error handling");
 	        }
 	    }
-
+ 
 	    ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
 	    logger.info("method: saveCourse Ends: " + response);
 	    return response;
 	}
+	
+	
 	
 	@SuppressWarnings({ "unchecked", "unused" })
 	public ResponseEntity<JsonResponse<Object>> saveTraining(String payload, String userId, String org, String orgDiv) {
