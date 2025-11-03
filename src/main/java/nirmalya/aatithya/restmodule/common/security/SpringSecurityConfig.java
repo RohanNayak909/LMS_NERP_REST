@@ -207,6 +207,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/master/rest-product-outline").permitAll()
         .antMatchers("/master/rest-product-questions").permitAll()
 
+
         // reports (optional)
         .antMatchers("/master/rest-report-attempts-30d").permitAll()
         .antMatchers("/master/rest-report-user-history").permitAll()
