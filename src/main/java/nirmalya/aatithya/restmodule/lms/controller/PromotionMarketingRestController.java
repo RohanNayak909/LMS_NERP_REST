@@ -136,5 +136,23 @@ import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 			return promotionMarketingRestDao.getAllProductDetailsnew();
 
 		}
+		
+		@PostMapping(value = "rest-saveCourseCoupon")
+	    public ResponseEntity<JsonResponse<Object>> saveCourseCoupon(@RequestBody String quizData, @RequestParam String userId,
+	            @RequestParam String org, @RequestParam String orgDiv) {
+	        logger.info("Method :saveCourseCoupon starts"+quizData);
+	        logger.info("Method :saveCourseCoupon endss");
+	        return promotionMarketingRestDao.saveCourseCoupon(quizData, userId, org, orgDiv);
+	    }
+		
+		
+		@RequestMapping(value = "rest-viewCourse", method = { RequestMethod.GET })
+		public JsonResponse<Object> viewCourse(@RequestParam String orgName,@RequestParam String orgDivision, @RequestParam String id ) {
+			logger.info("Method :viewCourse start");
+
+			logger.info("Method :viewCourse endss");
+			return promotionMarketingRestDao.viewCourse(orgName, orgDivision,id);
+		}
+		
 }
 

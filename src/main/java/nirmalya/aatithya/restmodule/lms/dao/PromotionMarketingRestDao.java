@@ -9,9 +9,14 @@ import java.util.Map;
 import javax.persistence.EntityManager;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
@@ -37,6 +42,7 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 
 			try {
 				String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "';";
+				logger.info("value=========="+value);
 				List<Object[]> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
 						.setParameter("actionType", "viewCoupon").setParameter("actionValue", value).getResultList();
 				resp.setBody(x.get(0));
@@ -391,6 +397,102 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 		}
 
 
+		@SuppressWarnings("unchecked")
+		public ResponseEntity<JsonResponse<Object>> saveCourseCoupon(String quizData, String userId, String org, String orgDiv) {
+		    logger.info("method: saveCourseCoupon Starts"+quizData);
+
+		    JsonResponse<Object> resp = new JsonResponse<>();
+		    try {
+		        // Validate and clean JSON data
+		        ObjectMapper mapper = new ObjectMapper();
+		        ObjectNode jsonNode = (ObjectNode) mapper.readTree(quizData);
+		        
+		        // Extract courseId early using Jackson for reliability
+		        String couponId = "";
+		        if (jsonNode.has("couponId") && !jsonNode.get("couponId").isNull()) {
+		        	couponId = jsonNode.get("couponId").asText();
+		            logger.info("Extracted couponId from JSON: " + couponId);
+		        } else {
+		            logger.info("No couponId found in JSON or couponId is null");
+		            resp.setCode("Failed");
+		            resp.setMessage("couponId ID is required to save.");
+		            return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+		        }
+
+		        // Optional: Clean quizMappings array if any text fields need processing
+		        // (e.g., if future extensions add descriptions; for now, minimal validation)
+		        if (jsonNode.has("activityMappings")) {
+		            ArrayNode mappingsArray = (ArrayNode) jsonNode.get("activityMappings");
+		            for (JsonNode mapping : mappingsArray) {
+		                if (!mapping.has("courseId") || !mapping.has("couponId") || !mapping.has("status")) {
+		                    logger.error("Invalid mapping structure in activityMappings");
+		                    resp.setCode("Failed");
+		                    resp.setMessage("Invalid  mapping structure.");
+		                    return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+		                }
+		            }
+		        }
+
+		        // Serialize to JSON with proper escaping
+		        String safeData = mapper.writeValueAsString(jsonNode);
+		        logger.info("Serialized safeData: " + safeData);
+		        // Escape single quotes for MySQL (avoid excessive backslash escaping)
+		        safeData = safeData.replace("'", "''");
+
+		        String value = "SET @activityData='" + safeData + "', @p_userId='" + userId + "', @p_org='" + org
+		                + "', @p_orgDiv='" + orgDiv + "';";
+		        logger.info("Constructed actionValue: " + value);
+
+		        // Execute stored procedure for saving/updating quiz mappings
+		        // Assumes stored procedure handles insert/update/delete based on provided mappings
+		        // (e.g., delete existing mappings for courseId, then insert new ones)
+		        logger.info("Saving quiz mappings for courseId: " + couponId);
+		        em.createNamedStoredProcedureQuery("coupon_management_Routines")
+		                .setParameter("actionType", "saveCourseCoupon")
+		                .setParameter("actionValue", value)
+		                .execute();
+		        resp.setMessage("Coupon Allocated successfully!");
+		        resp.setCode("Success");
+		         
+		    } catch (Exception e) {
+		        logger.error("Error: " + e.getMessage());
+		        try {
+		            String[] err = serverDao.errorProcedureCall(e);
+		            resp.setCode("Failed");
+		            resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
+		        } catch (Exception nestedException) {
+		            logger.error("Error while handling exception: " + nestedException.getMessage());
+		            resp.setCode("Failed");
+		            resp.setMessage("Oops! Something went wrong during error handling");
+		        }
+		    }
+
+		    ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+		    logger.info("method: saveCourseCoupon Ends: " + response);
+		    return response;
+		}
 		
+		
+		@SuppressWarnings("unchecked")
+		public JsonResponse<Object> viewCourse(String orgName, String orgDivision,String id) {
+			logger.info("Method : viewCourse Dao starts");
+
+			JsonResponse<Object> resp = new JsonResponse<Object>();
+
+			try {
+				String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='" + id + "';";
+				logger.info("value=========="+value);
+				List<Object[]> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+						.setParameter("actionType", "viewCouponCourse").setParameter("actionValue", value).getResultList();
+				resp.setBody(x.get(0));
+				resp.setCode("success");
+				resp.setMessage("Data Fetched successfully");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			logger.info("Method : viewCourse Dao ends");
+			return resp;
+
+		}
 		
 }
