@@ -166,6 +166,7 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 		            String validFrom = (String) requestJsonData.get("validFrom");
 		            String validTo = (String) requestJsonData.get("validTo");
 		            String status = (String) requestJsonData.get("status");
+		            String trackingUrl = (String) requestJsonData.get("trackingUrl");
 		            List<Map<String, Object>> rows = (List<Map<String, Object>>) requestJsonData.get("rows");
 
 		            // Convert rows to JSON
@@ -192,6 +193,7 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 		                          "@p_validFrom='" + validFrom + "', " +
 		                          "@p_validTo='" + validTo + "', " +
 		                          "@p_status='" + status + "', " +
+		                          "@p_trackingUrl='" + trackingUrl + "', "+
 		                          "@p_rows='" + rowsJson + "';";
 
 		            logger.info("Values for coupon record: {}", value);
@@ -214,7 +216,7 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 		            String status = (String) requestJsonData.get("status");
 		            String documentName = (String) requestJsonData.get("documentName"); // Extract document name if present
                     String description = (String) requestJsonData.get("description");
-
+                    String trackingUrl = (String) requestJsonData.get("trackingUrl");
 		            // Build stored procedure parameters
 		            StringBuilder valueBuilder = new StringBuilder("SET @p_orgName='" + orgName + "', " +
 		                                                          "@p_orgDiv='" + orgDiv + "', " +
@@ -223,6 +225,7 @@ import nirmalya.aatithya.restmodule.util.StringUtil;
 		                                                          "@p_startDate='" + startDate + "', " +
 		                                                          "@p_endDate='" + endDate + "', " +
 		                                                          "@p_createdById='" + createdById + "', " +
+		                                                          "@p_trackingUrl='" + trackingUrl + "', "+
 		                                                          "@p_status='" + status + "'");
 		            
 		            // Append documentName only if it's not null or empty
