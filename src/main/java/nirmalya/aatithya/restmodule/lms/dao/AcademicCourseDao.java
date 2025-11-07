@@ -267,7 +267,7 @@ public class AcademicCourseDao {
 			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
 					.setParameter("actionType", "viewTraining").setParameter("actionValue", value).getResultList();
 			resp.setBody(list);
-			logger.info("hhhhhhhhhhhhhhhhh" + list);
+			logger.info("tttttttttttttttttttttt" + list);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

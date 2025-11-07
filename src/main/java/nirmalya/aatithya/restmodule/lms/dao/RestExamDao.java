@@ -63,21 +63,23 @@ public class RestExamDao {
     return r0;
   }
 
-  private List<?> callProc(String actionType, String actionValue) {
+  @SuppressWarnings("unchecked")
+  private List<Object[]> callProc(String actionType, String actionValue) {
     Query q = em.createNativeQuery("CALL lms_exam_routines(:actionType, :actionValue)");
     q.setParameter("actionType", actionType);
     q.setParameter("actionValue", actionValue == null ? "" : actionValue);
-    return q.getResultList();
+    return (List<Object[]>) q.getResultList();
   }
 
   /* ======================= RUNTIME ======================= */
 
-  public JsonResponse<Object> eligibility(String userId, String productId, String mode) {
+  public JsonResponse<Object> eligibility(String userId, String productId, Integer trainingId, String mode) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = new StringBuilder()
         .append("SET @p_user_id='").append(esc(userId)).append("',")
         .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
         .append("@p_mode='").append(esc(mode == null ? "MOCK" : mode)).append("';")
         .toString();
 
@@ -95,7 +97,8 @@ public class RestExamDao {
 
   @Transactional
   public JsonResponse<Object> productStart(String orgName, String orgDivision, String userId,
-                                           String productId, String mode, Integer seed, String metaJson) {
+                                           String productId, Integer trainingId, String mode,
+                                           Integer seed, String metaJson) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = new StringBuilder()
@@ -103,21 +106,28 @@ public class RestExamDao {
         .append("@p_orgDiv='").append(esc(orgDivision)).append("',")
         .append("@p_user_id='").append(esc(userId)).append("',")
         .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
         .append("@p_mode=").append(mode == null ? "'MOCK'" : "'" + esc(mode) + "'").append(",")
         .append("@p_seed=").append(seed == null ? "NULL" : seed).append(",")
         .append("@p_meta_json=").append(metaJson == null ? "NULL" : "'" + esc(metaJson) + "'")
         .append(";").toString();
 
-      List<?> rows = callProc("productStart", value);
+      List<Object[]> rows = callProc("productStart", value);
       Object r0 = firstRow(rows);
 
-      // ATTEMPT_LIMIT path from SP
+      // ATTEMPT_LIMIT / PAYMENT_REQUIRED path from SP (first col code)
       if (r0 instanceof Object[]) {
         Object[] arr = (Object[]) r0;
         String code = arr.length > 0 && arr[0] != null ? String.valueOf(arr[0]) : null;
         if ("ATTEMPT_LIMIT".equalsIgnoreCase(code)) {
           resp.setCode("ATTEMPT_LIMIT");
           resp.setMessage(arr.length > 1 && arr[1] != null ? String.valueOf(arr[1]) : "Attempt limit reached");
+          resp.setBody(rows);
+          return resp;
+        }
+        if ("PAYMENT_REQUIRED".equalsIgnoreCase(code)) {
+          resp.setCode("PAYMENT_REQUIRED");
+          resp.setMessage(arr.length > 1 && arr[1] != null ? String.valueOf(arr[1]) : "Retake requires payment");
           resp.setBody(rows);
           return resp;
         }
@@ -146,13 +156,16 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> productGetQuestion(String userId, String productId, Integer qno) {
+  public JsonResponse<Object> productGetQuestion(String userId, String productId, Integer trainingId, Integer qno) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "',@p_qno="
-          + (qno == null ? 1 : qno) + ";";
-      List<Object[]> rows = (List<Object[]>) callProc("productGetQuestion", value);
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
+        .append("@p_qno=").append(qno == null ? 1 : qno)
+        .append(";").toString();
+      List<?> rows = callProc("productGetQuestion", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -162,13 +175,14 @@ public class RestExamDao {
   }
 
   @Transactional
-  public JsonResponse<Object> productAnswer(String userId, String productId, Integer qno,
+  public JsonResponse<Object> productAnswer(String userId, String productId, Integer trainingId, Integer qno,
                                             String selectedJson, String subjective, Integer timeSpentSec) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = new StringBuilder()
         .append("SET @p_user_id='").append(esc(userId)).append("',")
         .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
         .append("@p_qno=").append(qno == null ? 1 : qno).append(",")
         .append("@p_selected=").append(selectedJson == null ? "NULL" : "'" + esc(selectedJson) + "'").append(",")
         .append("@p_subjective=").append(subjective == null ? "NULL" : "'" + esc(subjective) + "'").append(",")
@@ -184,19 +198,19 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   @Transactional
-  public JsonResponse<Object> productFlag(String userId, String productId, Integer qno, Integer flagged) {
+  public JsonResponse<Object> productFlag(String userId, String productId, Integer trainingId, Integer qno, Integer flagged) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = new StringBuilder()
         .append("SET @p_user_id='").append(esc(userId)).append("',")
         .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
         .append("@p_qno=").append(qno == null ? 1 : qno).append(",")
         .append("@p_flagged=").append(flagged == null ? 1 : flagged)
         .append(";").toString();
 
-      List<Object[]> rows = (List<Object[]>) callProc("productFlag", value);
+      List<?> rows = callProc("productFlag", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("Flag updated");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -206,12 +220,15 @@ public class RestExamDao {
   }
 
   @Transactional
-  public JsonResponse<Object> productSubmit(String userId, String productId) {
+  public JsonResponse<Object> productSubmit(String userId, String productId, Integer trainingId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId)
+        .append(";").toString();
       List<?> rows = callProc("productSubmit", value);
-      // SP returns two columns (totalScore, passed). Return the row.
       resp.setBody(firstRow(rows));
       resp.setCode("success"); resp.setMessage("Submitted");
     } catch (Exception e) {
@@ -221,12 +238,15 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> productPalette(String userId, String productId) {
+  public JsonResponse<Object> productPalette(String userId, String productId, Integer trainingId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("productPalette", value);
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId)
+        .append(";").toString();
+      List<?> rows = callProc("productPalette", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -235,12 +255,15 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> productAttemptSummary(String userId, String productId) {
+  public JsonResponse<Object> productAttemptSummary(String userId, String productId, Integer trainingId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("productAttemptSummary", value);
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId)
+        .append(";").toString();
+      List<?> rows = callProc("productAttemptSummary", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -249,12 +272,15 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> resultHeader(String userId, String productId) {
+  public JsonResponse<Object> resultHeader(String userId, String productId, Integer trainingId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("resultHeader", value);
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId)
+        .append(";").toString();
+      List<?> rows = callProc("resultHeader", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -263,12 +289,15 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> resultBreakdown(String userId, String productId) {
+  public JsonResponse<Object> resultBreakdown(String userId, String productId, Integer trainingId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("resultBreakdown", value);
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId)
+        .append(";").toString();
+      List<?> rows = callProc("resultBreakdown", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -277,12 +306,15 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> resultAnswers(String userId, String productId) {
+  public JsonResponse<Object> resultAnswers(String userId, String productId, Integer trainingId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_user_id='" + esc(userId) + "',@p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("resultAnswers", value);
+      String value = new StringBuilder()
+        .append("SET @p_user_id='").append(esc(userId)).append("',")
+        .append("@p_product_id='").append(esc(productId)).append("',")
+        .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId)
+        .append(";").toString();
+      List<?> rows = callProc("resultAnswers", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -291,12 +323,35 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
+  @Transactional
+  public JsonResponse<Object> productAbort(String userId, String productId, Integer trainingId, String mode) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = new StringBuilder()
+          .append("SET @p_user_id='").append(esc(userId)).append("',")
+          .append("@p_product_id='").append(esc(productId)).append("',")
+          .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
+          .append("@p_mode='").append(esc(mode == null ? "MOCK" : mode)).append("';")
+          .toString();
+      List<?> rows = callProc("productAbort", value);
+      resp.setBody(firstCell(rows)); // SP returns single JSON column
+      resp.setCode("success");
+      resp.setMessage("Aborted if active");
+    } catch (Exception e) {
+      resp.setCode("failed");
+      resp.setMessage(e.getMessage());
+      logger.error("productAbort error", e);
+    }
+    return resp;
+  }
+
+  /* ======================= PRODUCT OUTLINE / QUESTIONS ======================= */
+
   public JsonResponse<Object> outline(String productId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("outline", value);
+      List<?> rows = callProc("outline", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -305,12 +360,11 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   public JsonResponse<Object> questionList(String productId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("questionList", value);
+      List<?> rows = callProc("questionList", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -319,13 +373,68 @@ public class RestExamDao {
     return resp;
   }
 
+  /* ======================= MARKETPLACE + RETAKES ======================= */
+
+  public JsonResponse<Object> mockMarketplaceList(String userId, String productId, Integer trainingId, Integer limit) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = new StringBuilder()
+          .append("SET @p_user_id='").append(esc(userId)).append("',")
+          .append("@p_product_id=").append(productId == null ? "NULL" : "'" + esc(productId) + "'").append(",")
+          .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
+          .append("@p_limit=").append(limit == null ? 50 : limit).append(";")
+          .toString();
+      List<?> rows = callProc("mockMarketplaceList", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("mockMarketplaceList error", e);
+    }
+    return resp;
+  }
+
+  public JsonResponse<Object> retakeCreateOrder(String userId, String productId, Integer trainingId, String gatewayPayloadJson) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = new StringBuilder()
+          .append("SET @p_user_id='").append(esc(userId)).append("',")
+          .append("@p_product_id='").append(esc(productId)).append("',")
+          .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
+          .append("@p_gateway_payload=").append(gatewayPayloadJson == null ? "NULL" : "'" + esc(gatewayPayloadJson) + "';")
+          .toString();
+      List<?> rows = callProc("retakeCreateOrder", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("Order created");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("retakeCreateOrder error", e);
+    }
+    return resp;
+  }
+
+  public JsonResponse<Object> retakeGrantCredit(String userId, String productId, Integer trainingId, String orderCode) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = new StringBuilder()
+          .append("SET @p_user_id='").append(esc(userId)).append("',")
+          .append("@p_product_id='").append(esc(productId)).append("',")
+          .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
+          .append("@p_order_code='").append(esc(orderCode)).append("';")
+          .toString();
+      List<?> rows = callProc("retakeGrantCredit", value);
+      resp.setBody(rows); resp.setCode("success"); resp.setMessage("Credit granted");
+    } catch (Exception e) {
+      resp.setCode("failed"); resp.setMessage(e.getMessage());
+      logger.error("retakeGrantCredit error", e);
+    }
+    return resp;
+  }
+
   /* ======================= REPORTS ======================= */
 
-  @SuppressWarnings("unchecked")
   public JsonResponse<Object> attempts30d() {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      List<Object[]> rows = (List<Object[]>) callProc("reportAttempts30d", "");
+      List<?> rows = callProc("reportAttempts30d", "");
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -334,12 +443,11 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   public JsonResponse<Object> userHistory(String userId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_user_id='" + esc(userId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("reportUserHistory", value);
+      List<?> rows = callProc("reportUserHistory", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -348,12 +456,11 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   public JsonResponse<Object> leaderboard(String productId, Integer limit) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "',@p_limit=" + (limit == null ? 100 : limit) + ";";
-      List<Object[]> rows = (List<Object[]>) callProc("reportLeaderboard", value);
+      List<?> rows = callProc("reportLeaderboard", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -364,7 +471,6 @@ public class RestExamDao {
 
   /* ============== ADMIN / PUBLISH / MAPPING / QUESTIONS ============== */
 
-  @SuppressWarnings("unchecked")
   @Transactional
   public JsonResponse<Object> quizUpsert(String quizCode, String quizTitle, String quizDescription,
                                          String author, Integer durationSec, String totalMarks,
@@ -382,7 +488,7 @@ public class RestExamDao {
         .append("@p_status=").append(status == null ? "NULL" : "'" + esc(status) + "'")
         .append(";").toString();
 
-      List<Object[]> rows = (List<Object[]>) callProc("quizUpsert", value);
+      List<?> rows = callProc("quizUpsert", value);
       resp.setBody(rows != null && !rows.isEmpty() ? rows.get(0) : null);
       resp.setCode("success"); resp.setMessage("Quiz upserted");
     } catch (Exception e) {
@@ -392,7 +498,6 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   @Transactional
   public JsonResponse<Object> quizPublish(String quizCode, String productId, Integer isPrimary, String mapStatus) {
     JsonResponse<Object> resp = new JsonResponse<>();
@@ -404,7 +509,7 @@ public class RestExamDao {
         .append("@p_map_status=").append(mapStatus == null ? "'ACTIVE'" : "'" + esc(mapStatus) + "'")
         .append(";").toString();
 
-      List<Object[]> rows = (List<Object[]>) callProc("quizPublish", value);
+      List<?> rows = callProc("quizPublish", value);
       resp.setBody(rows != null && !rows.isEmpty() ? rows.get(0) : null);
       resp.setCode("success"); resp.setMessage("Quiz published");
     } catch (Exception e) {
@@ -428,13 +533,12 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   @Transactional
   public JsonResponse<Object> quizRestore(String quizCode, String toStatus) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_quiz_code='" + esc(quizCode) + "',@p_to_status='" + esc(toStatus == null ? "DRAFT" : toStatus) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("quizRestore", value);
+      List<?> rows = callProc("quizRestore", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("Restored");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -485,13 +589,12 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   @Transactional
   public JsonResponse<Object> mapBulkStatus(String productId, String status) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "',@p_status='" + esc(status) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("mapBulkStatus", value);
+      List<?> rows = callProc("mapBulkStatus", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("Bulk status updated");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -500,12 +603,11 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   public JsonResponse<Object> quizList(String status) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = status == null ? "" : "SET @p_status='" + esc(status) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("quizList", value);
+      List<?> rows = callProc("quizList", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
@@ -514,67 +616,15 @@ public class RestExamDao {
     return resp;
   }
 
-  @SuppressWarnings("unchecked")
   public JsonResponse<Object> productQuizzes(String productId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value = "SET @p_product_id='" + esc(productId) + "';";
-      List<Object[]> rows = (List<Object[]>) callProc("productQuizzes", value);
+      List<?> rows = callProc("productQuizzes", value);
       resp.setBody(rows); resp.setCode("success"); resp.setMessage("OK");
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());
       logger.error("productQuizzes error", e);
-    }
-    return resp;
-  }
-
-  /* ============== ADMIN: QUESTIONS ============== */
-
-  @Transactional
-  public JsonResponse<Object> questionUpsertSimple(String quizCode, String sectionTitle, Integer sNo,
-                                                   String questionText, String a, String b, String c, String d,
-                                                   String rightAnswer, String ra, String rb, String rc, String rd) {
-    JsonResponse<Object> resp = new JsonResponse<>();
-    try {
-      String value = new StringBuilder()
-        .append("SET @p_quiz_code='").append(esc(quizCode)).append("',")
-        .append("@p_section_title=").append(sectionTitle == null ? "NULL" : "'" + esc(sectionTitle) + "'").append(",")
-        .append("@p_s_no=").append(sNo == null ? "NULL" : sNo).append(",")
-        .append("@p_question_text='").append(esc(questionText)).append("',")
-        .append("@p_option_a='").append(esc(a)).append("',")
-        .append("@p_option_b='").append(esc(b)).append("',")
-        .append("@p_option_c='").append(esc(c)).append("',")
-        .append("@p_option_d='").append(esc(d)).append("',")
-        .append("@p_right_answer='").append(esc(rightAnswer)).append("',")
-        .append("@p_rationale_a=").append(ra == null ? "NULL" : "'" + esc(ra) + "'").append(",")
-        .append("@p_rationale_b=").append(rb == null ? "NULL" : "'" + esc(rb) + "'").append(",")
-        .append("@p_rationale_c=").append(rc == null ? "NULL" : "'" + esc(rc) + "'").append(",")
-        .append("@p_rationale_d=").append(rd == null ? "NULL" : "'" + esc(rd) + "'")
-        .append(";").toString();
-      callProc("questionUpsertSimple", value);
-      resp.setCode("success"); resp.setMessage("OK");
-    } catch (Exception e) {
-      resp.setCode("failed"); resp.setMessage(e.getMessage());
-      logger.error("questionUpsertSimple error", e);
-    }
-    return resp;
-  }
-
-  @Transactional
-  public JsonResponse<Object> questionBulkImportSimple(String bulkJson) {
-    JsonResponse<Object> resp = new JsonResponse<>();
-    try {
-      String value = "SET @p_bulk_json='" + esc(bulkJson) + "';";
-      List<?> rows = callProc("questionBulkImportSimple", value);
-      resp.setBody(rows); resp.setCode("success"); resp.setMessage("Imported");
-    } catch (Exception e) {
-      SQLException sx = unwrapSqlException(e);
-      if (sx != null && "45000".equals(sx.getSQLState())) {
-        resp.setCode("failed"); resp.setMessage(sx.getMessage());
-      } else {
-        resp.setCode("failed"); resp.setMessage(e.getMessage());
-      }
-      logger.error("questionBulkImportSimple error", e);
     }
     return resp;
   }
@@ -584,141 +634,84 @@ public class RestExamDao {
     public final Object attemptId;
     AttemptIdBody(Object id) { this.attemptId = id; }
   }
-  
-  
-  @SuppressWarnings("unchecked")
+
+  /* ===== QUIZ CONFIG VIEW/EDIT ===== */
+
   public ResponseEntity<JsonResponse<Object>> saveQuiz(String quizData, String userId, String org, String orgDiv) {
-      logger.info("method: saveQuiz Starts");
+    logger.info("method: saveQuiz Starts");
 
-      JsonResponse<Object> resp = new JsonResponse<>();
-      ObjectMapper mapper = new ObjectMapper();
+    JsonResponse<Object> resp = new JsonResponse<>();
+    ObjectMapper mapper = new ObjectMapper();
 
-      try {
-          // Step 1: Validate JSON format before DB
-          try {
-              mapper.readTree(quizData);
-          } catch (JsonProcessingException e) {
-              throw new RuntimeException("Invalid JSON format: " + e.getMessage());
-          }
+    try {
+      // Validate JSON
+      try { mapper.readTree(quizData); }
+      catch (JsonProcessingException e) { throw new RuntimeException("Invalid JSON format: " + e.getMessage()); }
 
-          // Step 2: Clean text fields
-          ObjectNode jsonNode = (ObjectNode) mapper.readTree(quizData);
-          String[] textFields = {"question_text", "option_a", "option_b", "option_c", "option_d",
-                                 "rationale_a", "rationale_b", "rationale_c", "rationale_d",
-                                 "syllabus_ref", "section_title", "quiz_code"};
-          for (String field : textFields) {
-              if (jsonNode.has(field)) {
-                  String v = jsonNode.get(field).asText()
-                          .replaceAll("[\\r\\n\\t]+", " ")
-                          .replaceAll("\"", "\\\\\"")
-                          .trim();
-                  jsonNode.put(field, v);
-              }
-          }
-
-          // Step 3: Final cleaned JSON
-          String safeQuizData = mapper.writeValueAsString(jsonNode);
-          // Escape single quotes for MySQL
-          safeQuizData = safeQuizData.replace("'", "''");
-
-          logger.info("✅ Clean JSON for DB: {}", safeQuizData);
-
-          // Step 4: Construct MySQL variable string
-          String value = String.format(
-                  "SET @quizData='%s', @p_userId='%s', @p_org='%s', @p_orgDiv='%s';",
-                  safeQuizData, userId, org, orgDiv
-          );
-          logger.info("Constructed MySQL SET: {}", value);
-
-          // Step 5: Call stored procedure
-          List<?> rows = callProc("saveQuiz", value);
-          resp.setBody(rows);
-          resp.setCode("success");
-          resp.setMessage("Quiz saved successfully");
-
-      } catch (Exception e) {
-          logger.error("Error in saveQuiz: ", e);
-          resp.setCode("Failed");
-          resp.setMessage("Error: " + e.getMessage());
+      // Clean text fields
+      ObjectNode jsonNode = (ObjectNode) mapper.readTree(quizData);
+      String[] textFields = { "question_text","option_a","option_b","option_c","option_d",
+          "rationale_a","rationale_b","rationale_c","rationale_d",
+          "syllabus_ref","section_title","quiz_code" };
+      for (String field : textFields) {
+        if (jsonNode.has(field)) {
+          String v = jsonNode.get(field).asText()
+              .replaceAll("[\\r\\n\\t]+", " ")
+              .replaceAll("\"", "\\\\\"")
+              .trim();
+          jsonNode.put(field, v);
+        }
       }
 
-      ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
-      logger.info("method: saveQuiz Ends: {}", response);
-      return response;
+      String safeQuizData = mapper.writeValueAsString(jsonNode).replace("'", "''");
+
+      String value = String.format(
+          "SET @quizData='%s', @p_userId='%s', @p_org='%s', @p_orgDiv='%s';",
+          safeQuizData, userId, org, orgDiv
+      );
+
+      List<?> rows = callProc("saveQuiz", value);
+      resp.setBody(rows);
+      resp.setCode("success");
+      resp.setMessage("Quiz saved successfully");
+
+    } catch (Exception e) {
+      logger.error("Error in saveQuiz: ", e);
+      resp.setCode("Failed");
+      resp.setMessage("Error: " + e.getMessage());
+    }
+
+    ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
+    logger.info("method: saveQuiz Ends: {}", response);
+    return response;
   }
 
-  @SuppressWarnings("unchecked")
   public JsonResponse<Object> viewQuizConfig(String orgName, String orgDivision) {
-      logger.info("Method : viewQuizConfig starts");
-      JsonResponse<Object> resp = new JsonResponse<Object>();
-
-      try {
-          String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "';";
-          logger.info("Procedure Params: " + value);
-
-          List<?> list = callProc("viewQuizConfig", value);
-
-          resp.setBody(list);
-          resp.setMessage("Data fetched successfully");
-          resp.setCode("success");
-
-      } catch (Exception e) {
-          e.printStackTrace();
-          resp.setMessage("Something went wrong!");
-          resp.setCode("failed");
-      }
-
-      logger.info("Method : viewQuizConfig ends"+resp);
-      return resp;
-  }
-
-  @SuppressWarnings("unchecked")
-  public JsonResponse<Object> editQuizConfig(String quizId,Integer id2, String orgName, String orgDivision) {
-      logger.info("Method : editQuizConfig starts");
-      JsonResponse<Object> resp = new JsonResponse<Object>();
-
-      try {
-    	  String value = "SET @p_quizId='" + quizId + "', @pid2=" + id2 + ";";
-          logger.info("Procedure Params: " + value);
-
-       
-          List<?> list = callProc("editQuizConfig", value);
-
-          resp.setBody(list);
-
-          resp.setBody(list);
-          resp.setMessage("Data fetched successfully");
-          resp.setCode("success");
-
-      } catch (Exception e) {
-          e.printStackTrace();
-          resp.setMessage("Something went wrong!");
-          resp.setCode("failed");
-      }
-
-      logger.info("Method : editQuizConfig ends");
-      return resp;
-  }
-
-  @SuppressWarnings("unchecked")
-  @Transactional
-  public JsonResponse<Object> productAbort(String userId, String productId, String mode) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = new StringBuilder()
-          .append("SET @p_user_id='").append(esc(userId)).append("',")
-          .append("@p_product_id='").append(esc(productId)).append("',")
-          .append("@p_mode='").append(esc(mode == null ? "MOCK" : mode)).append("';")
-          .toString();
-      List<Object[]> rows = (List<Object[]>) callProc("productAbort", value);
-      // SP returns a single JSON column (status/message/attemptId). Return it as-is.
-      resp.setBody(firstCell(rows));
+      String value = "SET @p_org='" + esc(orgName) + "',@p_orgDiv='" + esc(orgDivision) + "';";
+      List<?> list = callProc("viewQuizConfig", value);
+      resp.setBody(list);
+      resp.setMessage("Data fetched successfully");
       resp.setCode("success");
-      resp.setMessage("Aborted if active");
     } catch (Exception e) {
+      resp.setMessage("Something went wrong!");
       resp.setCode("failed");
-      resp.setMessage(e.getMessage());
-      logger.error("productAbort error", e);
+    }
+    return resp;
+  }
+
+  public JsonResponse<Object> editQuizConfig(String quizId, Integer id2, String orgName, String orgDivision) {
+    JsonResponse<Object> resp = new JsonResponse<>();
+    try {
+      String value = "SET @p_quizId='" + esc(quizId) + "', @pid2=" + id2 + ";";
+      List<?> list = callProc("editQuizConfig", value);
+      resp.setBody(list);
+      resp.setMessage("Data fetched successfully");
+      resp.setCode("success");
+    } catch (Exception e) {
+      resp.setMessage("Something went wrong!");
+      resp.setCode("failed");
     }
     return resp;
   }
