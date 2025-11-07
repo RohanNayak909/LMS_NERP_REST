@@ -264,6 +264,14 @@ public class RestAcademicCourseController {
 
 	}
 	
+	@RequestMapping(value = "rest-get-reccent-courses", method = { RequestMethod.GET })
+	public JsonResponse<Object> getRecentPurchaseCourses(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String userId) {
+		logger.info("Method :getRecentPurchaseCourses start");
+
+		logger.info("Method :getRecentPurchaseCourses endss");
+		return academicCourseDao.getRecentPurchaseCourses(orgName,orgDivision,userId);
+
+	}
 	@PostMapping(value = "rest-academic-course-quiz-save")
     public ResponseEntity<JsonResponse<Object>> saveQuizMappings(@RequestBody String quizData, @RequestParam String userId,
             @RequestParam String org, @RequestParam String orgDiv) {

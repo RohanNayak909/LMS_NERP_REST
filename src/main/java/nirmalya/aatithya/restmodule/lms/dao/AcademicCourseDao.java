@@ -970,7 +970,32 @@ public class AcademicCourseDao {
 
 	}
 
-	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getRecentPurchaseCourses(String orgName, String orgDivision, String userId) {
+		logger.info("Method : getRecentPurchaseCourses Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_userId='" + userId + "';";
+			
+			logger.info(value);
+			
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "get-recent-purchase").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getRecentPurchaseCourses Dao ends" + resp);
+		return resp;
+
+	}
 	
 	// DAO Method (e.g., in AcademicCourseDao.java)
 	@SuppressWarnings("unchecked")
