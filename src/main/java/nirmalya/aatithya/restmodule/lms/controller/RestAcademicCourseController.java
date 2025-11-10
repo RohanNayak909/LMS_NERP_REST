@@ -281,4 +281,11 @@ public class RestAcademicCourseController {
     }
 	
 
+	
+	@RequestMapping(value = "rest-viewPublicBatches", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewPublicBatches(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :viewPublicBatches start");
+		logger.info("Method :viewPublicBatches endss");
+		return academicCourseDao.viewPublicBatches(orgName, orgDivision,id);
+	}
 }

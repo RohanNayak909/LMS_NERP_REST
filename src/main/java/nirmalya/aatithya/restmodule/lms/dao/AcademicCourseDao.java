@@ -1075,4 +1075,26 @@ public class AcademicCourseDao {
 	    logger.info("method: saveQuizMappings Ends: " + response);
 	    return response;
 	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> viewPublicBatches(String orgName, String orgDivision,String id) {
+		logger.info("Method : viewPublicBatches Dao starts"+id);
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='" + id + "';";
+			logger.info(value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "viewPublicBatches").setParameter("actionValue", value).getResultList();
+			resp.setBody(list);
+			logger.info("viewPublicBatches" + list);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		logger.info("Method : viewPublicBatches Dao ends");
+		return resp;
+
+	}
 }
