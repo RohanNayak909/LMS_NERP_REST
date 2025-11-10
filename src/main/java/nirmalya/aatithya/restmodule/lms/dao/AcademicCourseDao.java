@@ -1,11 +1,14 @@
 package nirmalya.aatithya.restmodule.lms.dao;
 
+import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
@@ -969,6 +972,120 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> saveCouponDetails(Map<String, Object> payload) {
+	    logger.info("Method : saveCouponDetails DAO starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	    // 🔹 Log incoming payload values for debugging
+	    for (Map.Entry<String, Object> entry : payload.entrySet()) {
+	        logger.info("{} = {}", entry.getKey(), entry.getValue());
+	    }
+
+	    try {
+	        // ✅ Extract parameters safely from payload
+	        String orgName = (String) payload.get("orgName");
+	        String orgDivision = (String) payload.get("orgDivision");
+	        String loginUserId = (String) payload.get("loginUserId");
+	        String userId = (String) payload.get("userId");
+	        String couponCode = (String) payload.get("couponCode");
+	        String productId = (String) payload.get("productId");
+	        String trainingId = (String) payload.get("trainingId");
+	        String enrollId = (String) payload.get("enrollId");
+
+	        // ✅ Build SQL parameter string for stored procedure
+	        String value = String.format(
+	            "SET @p_org='%s', @p_orgDiv='%s', @p_loginUserId='%s', @p_userId='%s', " +
+	            "@p_enrollId='%s', @p_productId='%s', @p_trainingId='%s', @p_couponCode='%s';",
+	            orgName, orgDivision, loginUserId, userId, enrollId, productId, trainingId, couponCode
+	        );
+
+	        logger.info("Executing stored procedure with params: {}", value);
+
+	        // ✅ Execute stored procedure (no need to fetch result)
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	            .setParameter("actionType", "addCouponDetails")
+	            .setParameter("actionValue", value)
+	            .execute();
+
+	        // ✅ If execution succeeds, set a success response
+	        resp.setCode("success");
+	        resp.setMessage("Coupon details saved successfully.");
+	        resp.setBody(null);
+
+	    } catch (Exception e) {
+	        logger.error("Error in saveCouponDetails DAO:", e);
+	        resp.setCode("failed");
+	        resp.setMessage("Database operation failed: " + e.getMessage());
+	        resp.setBody(null);
+	    }
+
+	    logger.info("Method : saveCouponDetails DAO ends with response: {}", resp);
+	    return resp;
+	} 
+ 
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> deleteCoupon(Map<String, Object> payload) {
+	    logger.info("Method : deleteCoupon DAO starts");
+	    JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	    try {
+	        // ✅ Extract params safely
+	        String orgName = (String) payload.get("orgName");
+	        String orgDivision = (String) payload.get("orgDivision");
+	        String loginUserId = (String) payload.get("loginUserId");
+	        String userId = (String) payload.get("userId");
+	        String productId = (String) payload.get("productId");
+	        String trainingId = (String) payload.get("trainingId");
+	        String enrollId = (String) payload.get("enrollId");
+	        String couponCode = (String) payload.get("couponCode");
+
+	        // ✅ Build SQL parameter string
+	        String value = String.format(
+	            "SET @p_org='%s', @p_orgDiv='%s', @p_loginUserId='%s', " +
+	            "@p_userId='%s', @p_enrollId='%s', @p_productId='%s', " +
+	            "@p_trainingId='%s', @p_couponCode='%s';",
+	            orgName, orgDivision, loginUserId, userId, enrollId, productId, trainingId, couponCode
+	        );
+
+	        logger.info("Executing stored procedure for deleteCouponDetails with params: {}", value);
+
+	        // ✅ Execute procedure
+	        Object result = em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", "deleteCouponDetails")
+	                .setParameter("actionValue", value)
+	                .getSingleResult();
+
+	        // ✅ Convert result safely
+	        int rowsAffected = 0;
+	        if (result != null) {
+	            try {
+	                rowsAffected = ((Number) result).intValue();
+	            } catch (Exception ex) {
+	                logger.warn("Unexpected ROW_COUNT() result type: {} → {}", result.getClass(), result);
+	            }
+	        }
+
+ 	        if (rowsAffected > 0) {
+	            resp.setCode("success");
+	            resp.setMessage("Coupon deleted successfully.");
+	        } else {
+	            resp.setCode("failed");
+	            resp.setMessage("No matching coupon found to delete.");
+	        }
+
+	    } catch (Exception e) {
+	        logger.error("Error in deleteCoupon DAO:", e);
+	        resp.setCode("failed");
+	        resp.setMessage("Failed to delete coupon: " + e.getMessage());
+	    }
+
+	    logger.info("Method : deleteCoupon DAO ends with response: {}", resp);
+	    return resp;
+	}
+
+
 
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> getRecentPurchaseCourses(String orgName, String orgDivision, String userId) {

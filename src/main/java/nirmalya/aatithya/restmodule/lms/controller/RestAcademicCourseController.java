@@ -263,7 +263,22 @@ public class RestAcademicCourseController {
 		return academicCourseDao.getadminAllHeadCount(orgName,orgDivision,userId);
 
 	}
-	
+	@PostMapping(value = "rest-add-coupon")
+	public JsonResponse<Object> saveCouponDetails(@RequestBody Map<String,Object>payload) {
+		logger.info("Method :saveCouponDetails start");
+
+		logger.info("Method :saveCouponDetails endss");
+		return academicCourseDao.saveCouponDetails(payload);
+
+	}
+	@PostMapping(value = "rest-delete-coupon")
+	public JsonResponse<Object> deleteCoupon(@RequestBody Map<String,Object>payload) {
+		logger.info("Method :deleteCoupon start");
+
+		logger.info("Method :deleteCoupon endss");
+		return academicCourseDao.deleteCoupon(payload);
+
+	}
 	@RequestMapping(value = "rest-get-reccent-courses", method = { RequestMethod.GET })
 	public JsonResponse<Object> getRecentPurchaseCourses(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String userId) {
 		logger.info("Method :getRecentPurchaseCourses start");
