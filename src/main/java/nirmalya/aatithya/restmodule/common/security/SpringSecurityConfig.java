@@ -169,7 +169,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/grc/**").permitAll()
 				.antMatchers("/maintenance/**").permitAll()
 				.antMatchers("/meeting/**").permitAll()
-				
+				.antMatchers("/master/mail/**").permitAll()
 				.antMatchers("/canteen/**").permitAll()
 				.antMatchers("/appraisal/**").permitAll()
 				.antMatchers("/patient/**").permitAll()
@@ -198,24 +198,52 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/master/rest-quiz-list").permitAll()
 
         // runtime (user flows)
-        .antMatchers("/master/rest-exam-start").permitAll()
-        .antMatchers("/master/rest-exam-get-question").permitAll()
-        .antMatchers("/master/rest-exam-answer").permitAll()
-        .antMatchers("/master/rest-exam-submit").permitAll()
-        .antMatchers("/master/rest-exam-result-header").permitAll()
-        .antMatchers("/master/rest-exam-result-breakdown").permitAll()
-        .antMatchers("/master/rest-product-outline").permitAll()
-        .antMatchers("/master/rest-product-questions").permitAll()
+              // ===== Runtime – Exam flow =====
+			  .antMatchers("/master/rest-exam-eligibilitys").permitAll()      // legacy alias
+			  .antMatchers("/master/rest-exam-eligibility").permitAll()
+			  .antMatchers("/master/rest-exam-retake-status").permitAll()
+	  
+			  .antMatchers( "/master/rest-exam-start").permitAll()
+			  .antMatchers(  "/master/rest-exam-get-question").permitAll()
+			  .antMatchers( "/master/rest-exam-answer").permitAll()
+			  .antMatchers( "/master/rest-exam-flag").permitAll()
+			  .antMatchers( "/master/rest-exam-submit").permitAll()
+			  .antMatchers( "/master/rest-exam-palette").permitAll()
+			  .antMatchers(  "/master/rest-exam-attempt-summary").permitAll()
+			  .antMatchers(  "/master/rest-exam-result-header").permitAll()
+			  .antMatchers(  "/master/rest-exam-result-breakdown").permitAll()
+			  .antMatchers( "/master/rest-exam-result-answers").permitAll()
+			  .antMatchers("/master/rest-exam-abort").permitAll()
+	  
+			  // ===== Product outline / questions =====
+			  .antMatchers( "/master/rest-product-outline").permitAll()
+			  .antMatchers( "/master/rest-product-questions").permitAll()
+	  
+			  // ===== Retakes (payments/credits) =====
+			  .antMatchers( "/master/rest-exam-retake-create-order").permitAll()
+			  .antMatchers( "/master/rest-exam-retake-grant-credit").permitAll()
+	  
+			  // ===== Admin quiz-config JSON (open for now; lock down later) =====
+			  .antMatchers( "/master/rest-quiz-config-add").permitAll()
+			  .antMatchers(  "/master/rest-viewQuizConfig").permitAll()
+			  .antMatchers(  "/master/rest-editQuizConfig").permitAll()
+	  
+			  // ===== Reports (optional) =====
+			  .antMatchers("/master/rest-report-attempts-30d").permitAll()
+			  .antMatchers("/master/rest-report-user-history").permitAll()
+			  .antMatchers("/master/rest-report-leaderboard").permitAll()
+	  
+			  // ===== Diagnostics (optional; remove/tighten in prod) =====
+			  .antMatchers("/master/rest-exam-ping").permitAll()
+			  .antMatchers("/diag/**").permitAll()
 
 
-        // reports (optional)
-        .antMatchers("/master/rest-report-attempts-30d").permitAll()
-        .antMatchers("/master/rest-report-user-history").permitAll()
-        .antMatchers("/master/rest-report-leaderboard").permitAll()
-        .antMatchers("/master/rest-exam-eligibilitys").permitAll()
+			  .antMatchers("/master/mail/send").permitAll()
 
-        // diagnostic (optional; remove in prod)
-        .antMatchers("/master/rest-exam-ping", "/diag/**").permitAll()
+			  .antMatchers("/master/mail/send-bulk").permitAll()
+
+			  .antMatchers("/master/mail/preview").permitAll()
+
         // .antMatchers("/master/rest-exam-eligibility", "/diag/**").permitAll()
 
 
