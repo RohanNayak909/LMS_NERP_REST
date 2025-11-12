@@ -1,5 +1,7 @@
 package nirmalya.aatithya.restmodule.lms.controller;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -268,13 +270,10 @@ public class RestExamController {
   /* ====== Admin: JSON quiz config (save/view/edit) ====== */
 
   /** SP needs only @quizData. org/orgDiv kept for compatibility, ignored in SP. */
-  @PostMapping(value = "rest-quiz-config-add", consumes = "application/json")
-  public ResponseEntity<JsonResponse<Object>> saveQuiz(
-      @RequestBody String quizData,
-      @RequestParam(required = false) String userId,
-      @RequestParam(required = false) String org,
-      @RequestParam(required = false) String orgDiv) {
-    return dao.saveQuiz(quizData, userId, org, orgDiv);
+  @PostMapping("rest-quiz-config-add")
+  public ResponseEntity<JsonResponse<Object>> saveQuiz(@RequestBody Map<String,Object> bodyToSend) {
+      logger.info("REST ▶️ rest-quiz-config-add called with payload length={} chars");
+      return dao.saveQuiz(bodyToSend);
   }
 
   /** SP returns a single JSON aggregate. */
