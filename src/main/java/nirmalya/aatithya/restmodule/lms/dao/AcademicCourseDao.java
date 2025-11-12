@@ -1205,11 +1205,19 @@ public class AcademicCourseDao {
 			logger.info(value);
 			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
 					.setParameter("actionType", "viewPublicBatches").setParameter("actionValue", value).getResultList();
-			resp.setBody(list);
-			logger.info("viewPublicBatches" + list);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			/*
+			 * resp.setBody(list); logger.info("viewPublicBatches" + list); } catch
+			 * (Exception e) { e.printStackTrace(); }
+			 */
+		resp.setBody(list);
+		resp.setCode("success");
+		resp.setMessage("Data fetched successfully");
+	} catch (Exception e) {
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		e.printStackTrace();
+	}
+		
 		logger.info("Method : viewPublicBatches Dao ends");
 		return resp;
 
