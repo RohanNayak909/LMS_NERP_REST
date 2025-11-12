@@ -16,21 +16,20 @@ import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-	@Repository
-	public class RestStudentEnrollCourseDao {
-		Logger logger = LoggerFactory.getLogger(RestStudentEnrollCourseDao.class);
+@Repository
+public class RestStudentEnrollCourseDao {
+	Logger logger = LoggerFactory.getLogger(RestStudentEnrollCourseDao.class);
 
-		@Autowired
-		EntityManager em;
+	@Autowired
+	EntityManager em;
 
-		@Autowired
-		ServerDao serverDao;
-		@Autowired 
-		PasswordEncoder passEncoder;
-		
-		
+	@Autowired
+	ServerDao serverDao;
+	@Autowired
+	PasswordEncoder passEncoder;
+
 	@SuppressWarnings("unchecked")
-	public JsonResponse<Object> viewEnrollCourses(String orgName, String orgDivision,String userId) {
+	public JsonResponse<Object> viewEnrollCourses(String orgName, String orgDivision, String userId) {
 		logger.info("Method : viewEnrollCourses Dao starts");
 
 		JsonResponse<Object> resp = new JsonResponse<Object>();
@@ -45,20 +44,20 @@ import org.json.JSONObject;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		logger.info("Method : viewEnrollCourses Dao ends"+resp);
+		logger.info("Method : viewEnrollCourses Dao ends" + resp);
 		return resp;
 
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> saveUserData(String orgName, String orgDivision, String userId, String data) {
 		logger.info("Method : saveUserData Dao starts" + data);
 
 		JsonResponse<Object> resp = new JsonResponse<Object>();
-		
+
 		JSONObject jsonObj = new JSONObject(data);
 		try {
-			String encodedPassword="";
+			String encodedPassword = "";
 			String firstName = jsonObj.optString("firstName");
 			String lastName = jsonObj.optString("lastName");
 			String dob = jsonObj.optString("dob");
@@ -67,12 +66,13 @@ import org.json.JSONObject;
 			String email = jsonObj.optString("email");
 			String phone = jsonObj.optString("phone");
 			String password = jsonObj.optString("password");
-			encodedPassword= passEncoder.encode(password);
-			
+			encodedPassword = passEncoder.encode(password);
 
 			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_createdBy='" + userId
-					+ "', @p_firstName='" + firstName
-					+ "', @p_lastName='" + lastName + "', @p_dob='" + dob + "', @p_nationality='" + nationality + "', @p_gender='" + gender + "', @p_email='" + email + "', @p_phone='" + phone + "', @p_password='" + password + "',@p_encodedPassword='" + encodedPassword + "';";
+					+ "', @p_firstName='" + firstName + "', @p_lastName='" + lastName + "', @p_dob='" + dob
+					+ "', @p_nationality='" + nationality + "', @p_gender='" + gender + "', @p_email='" + email
+					+ "', @p_phone='" + phone + "', @p_password='" + password + "',@p_encodedPassword='"
+					+ encodedPassword + "';";
 
 			logger.info("value for items for saveUserData===================>" + value);
 			List<Object[]> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
@@ -90,17 +90,16 @@ import org.json.JSONObject;
 		logger.info("Method : saveUserData Dao ends");
 		return resp;
 	}
-	
-	
+
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> saveUserDatalms(String orgName, String orgDivision, String userId, String data) {
 		logger.info("Method : saveUserData Dao starts" + data);
 
 		JsonResponse<Object> resp = new JsonResponse<Object>();
-		
+
 		JSONObject jsonObj = new JSONObject(data);
 		try {
-			String encodedPassword="";
+			String encodedPassword = "";
 			String firstName = jsonObj.optString("firstName");
 			String lastName = jsonObj.optString("lastName");
 			String dob = jsonObj.optString("dob");
@@ -109,12 +108,13 @@ import org.json.JSONObject;
 			String email = jsonObj.optString("email");
 			String phone = jsonObj.optString("phone");
 			String password = jsonObj.optString("password");
-			encodedPassword= passEncoder.encode(password);
-			
+			encodedPassword = passEncoder.encode(password);
 
 			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_createdBy='" + userId
-					+ "', @p_firstName='" + firstName
-					+ "', @p_lastName='" + lastName + "', @p_dob='" + dob + "', @p_nationality='" + nationality + "', @p_gender='" + gender + "', @p_email='" + email + "', @p_phone='" + phone + "', @p_password='" + password + "',@p_encodedPassword='" + encodedPassword + "';";
+					+ "', @p_firstName='" + firstName + "', @p_lastName='" + lastName + "', @p_dob='" + dob
+					+ "', @p_nationality='" + nationality + "', @p_gender='" + gender + "', @p_email='" + email
+					+ "', @p_phone='" + phone + "', @p_password='" + password + "',@p_encodedPassword='"
+					+ encodedPassword + "';";
 
 			logger.info("value for items for saveUserData===================>" + value);
 			List<Object[]> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
@@ -132,8 +132,57 @@ import org.json.JSONObject;
 		logger.info("Method : saveUserData Dao ends");
 		return resp;
 	}
-	
-	
+
+	/*
+	 * @SuppressWarnings("unchecked") public JsonResponse<Object>
+	 * saveUserDatalms(String orgName, String orgDivision, String userId, String
+	 * data) { logger.info("Method : saveUserData Dao starts" + data);
+	 * 
+	 * JsonResponse<Object> resp = new JsonResponse<Object>();
+	 * 
+	 * try { JSONObject jsonObj = new JSONObject(data);
+	 * 
+	 * String encodedPassword = ""; String firstName =
+	 * jsonObj.optString("firstName"); String lastName =
+	 * jsonObj.optString("lastName"); String dob = jsonObj.optString("dob"); String
+	 * nationality = jsonObj.optString("nationality"); String gender =
+	 * jsonObj.optString("gender"); String email = jsonObj.optString("email");
+	 * String phone = jsonObj.optString("phone"); String password =
+	 * jsonObj.optString("password"); String type = jsonObj.optString("type",
+	 * "Normal User"); // <-- new type field (can be null or 'public batches')
+	 * 
+	 * // Encode password encodedPassword = passEncoder.encode(password);
+	 * 
+	 * // Construct parameter string for stored procedure String value =
+	 * "SET @p_org='" + orgName + "', @p_orgDiv='" + orgDivision +
+	 * "', @p_createdBy='" + userId + "', @p_firstName='" + firstName +
+	 * "', @p_lastName='" + lastName + "', @p_dob='" + dob + "', @p_nationality='" +
+	 * nationality + "', @p_gender='" + gender + "', @p_email='" + email +
+	 * "', @p_phone='" + phone + "', @p_password='" + password +
+	 * "', @p_encodedPassword='" + encodedPassword + "', @p_type=" + (type !=
+	 * "Normal User" ? ("'" + type + "'") : "Normal User") + ";"; // <-- safely
+	 * handle null
+	 * 
+	 * logger.info("Value for saveUserData===================>" + value);
+	 * 
+	 * // Execute stored procedure
+	 * 
+	 * List<Object[]> result =
+	 * em.createNamedStoredProcedureQuery("coupon_management_Routines")
+	 * .setParameter("actionType", "saveUserData") .setParameter("actionValue",
+	 * value) .getResultList();
+	 * 
+	 * // Prepare response resp.setBody(result.get(0));
+	 * 
+	 * resp.setCode("success"); resp.setMessage("User Registered Successfully");
+	 * 
+	 * } catch (Exception e) { resp.setCode("failed");
+	 * resp.setMessage(e.getMessage()); logger.error("Error in saveUserData Dao: ",
+	 * e); }
+	 * 
+	 * logger.info("Method : saveUserData Dao ends"); return resp; }
+	 */
+
 // 	@SuppressWarnings("unchecked")
 // 	public JsonResponse<Object> saveEnrollmentData(String orgName, String orgDivision, String userId, String data) {
 // 	    logger.info("Method : saveEnrollmentData Dao starts" + userId);
@@ -152,12 +201,12 @@ import org.json.JSONObject;
 // 	        String zip = jsonObj.optString("zip");
 // 	        String paymentMethod = jsonObj.optString("paymentMethod");
 // 	        String trainingId = jsonObj.optString("trainingId");
-	        
+
 // 	        JSONObject cardInfo = jsonObj.optJSONObject("cardInfo");
 // 	        String cardNumber = cardInfo != null ? cardInfo.optString("cardNumber") : "";
 // 	        String expiryDate = cardInfo != null ? cardInfo.optString("expiryDate") : "";
 // 	        String cvv = cardInfo != null ? cardInfo.optString("cvv") : "";
-	       
+
 // logger.info("ddddd"+trainingId);
 // 	        // Loop through productIds
 // 	        for (int i = 0; i < productIds.length(); i++) {
@@ -180,11 +229,10 @@ import org.json.JSONObject;
 
 // 	            logger.info("value for saveEnrollmentData: " + value);
 
-				
 // 				  em.createNamedStoredProcedureQuery("coupon_management_Routines")
 // 				  .setParameter("actionType", "saveEnrolmentData") .setParameter("actionValue",
 // 				  value) .execute();
-				 
+
 // 	        }
 
 // 	        resp.setCode("success");
@@ -200,114 +248,103 @@ import org.json.JSONObject;
 // 	    return resp;
 // 	}
 
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> saveEnrollmentData(String orgName, String orgDivision, String userId, String data) {
+		logger.info("Method : saveEnrollmentData Dao starts" + userId);
+		System.out.println(data);
 
+		JsonResponse<Object> resp = new JsonResponse<Object>();
 
-@SuppressWarnings("unchecked")
-public JsonResponse<Object> saveEnrollmentData(String orgName, String orgDivision, String userId, String data) {
-    logger.info("Method : saveEnrollmentData Dao starts" + userId);
-    System.out.println(data);
+		try {
+			JSONObject jsonObj = new JSONObject(data);
 
-    JsonResponse<Object> resp = new JsonResponse<Object>();
+			// list of course/product ids coming from UI
+			JSONArray productIds = jsonObj.getJSONArray("productIds");
 
-    try {
-        JSONObject jsonObj = new JSONObject(data);
+			// common fields
+			String firstName = jsonObj.optString("firstName");
+			String lastName = jsonObj.optString("lastName");
+			String email = jsonObj.optString("email");
+			String address = jsonObj.optString("address");
+			String city = jsonObj.optString("city");
+			String zip = jsonObj.optString("zip");
+			String paymentMethod = jsonObj.optString("paymentMethod");
+			String trainingIdCsv = jsonObj.optString("trainingId"); // full CSV for all trainings
+			JSONObject cardInfo = jsonObj.optJSONObject("cardInfo");
+			String cardNumber = cardInfo != null ? cardInfo.optString("cardNumber") : "";
+			String expiryDate = cardInfo != null ? cardInfo.optString("expiryDate") : "";
+			String cvv = cardInfo != null ? cardInfo.optString("cvv") : "";
 
-        // list of course/product ids coming from UI
-        JSONArray productIds = jsonObj.getJSONArray("productIds");
+			// to avoid calling SP multiple times for same course
+			java.util.Set<String> done = new java.util.HashSet<String>();
 
-        // common fields
-        String firstName = jsonObj.optString("firstName");
-        String lastName = jsonObj.optString("lastName");
-        String email = jsonObj.optString("email");
-        String address = jsonObj.optString("address");
-        String city = jsonObj.optString("city");
-        String zip = jsonObj.optString("zip");
-        String paymentMethod = jsonObj.optString("paymentMethod");
-        String trainingIdCsv = jsonObj.optString("trainingId"); // full CSV for all trainings
-        JSONObject cardInfo = jsonObj.optJSONObject("cardInfo");
-        String cardNumber = cardInfo != null ? cardInfo.optString("cardNumber") : "";
-        String expiryDate = cardInfo != null ? cardInfo.optString("expiryDate") : "";
-        String cvv = cardInfo != null ? cardInfo.optString("cvv") : "";
+			// loop as you do
+			for (int i = 0; i < productIds.length(); i++) {
+				String productId = productIds.getString(i);
 
-        // to avoid calling SP multiple times for same course
-        java.util.Set<String> done = new java.util.HashSet<String>();
+				// if already processed this course, skip
+				if (done.contains(productId)) {
+					logger.info("Skipping duplicate productId (already saved): " + productId);
+					continue;
+				}
+				done.add(productId);
 
-        // loop as you do
-        for (int i = 0; i < productIds.length(); i++) {
-            String productId = productIds.getString(i);
+				// collect ALL trainingIds for this course
+				StringBuilder trainingForThisCourse = new StringBuilder();
+				if (trainingIdCsv != null && !trainingIdCsv.trim().isEmpty()) {
+					String[] all = trainingIdCsv.split(",");
+					for (int k = 0; k < all.length; k++) {
+						String tr = all[k] != null ? all[k].trim() : "";
+						if (tr.length() == 0) {
+							continue;
+						}
+						// IMPORTANT: one course has multiple training type, so we add ALL that start
+						// with this course
+						if (tr.startsWith(productId + "_")) {
+							if (trainingForThisCourse.length() > 0) {
+								trainingForThisCourse.append(",");
+							}
+							trainingForThisCourse.append(tr);
+						}
+					}
+				}
+				String finalTrainingIds = trainingForThisCourse.toString();
+				logger.info("trainingIds for course/product " + productId + " = " + finalTrainingIds);
 
-            // if already processed this course, skip
-            if (done.contains(productId)) {
-                logger.info("Skipping duplicate productId (already saved): " + productId);
-                continue;
-            }
-            done.add(productId);
+				// build your SET
+				String value = "SET @p_org='" + escapeSql(orgName) + "', @p_orgDiv='" + escapeSql(orgDivision)
+						+ "', @p_createdBy='" + escapeSql(userId) + "', @p_firstName='" + escapeSql(firstName)
+						+ "', @p_lastName='" + escapeSql(lastName) + "', @p_email='" + escapeSql(email)
+						+ "', @p_address='" + escapeSql(address) + "', @p_city='" + escapeSql(city) + "', @p_zip='"
+						+ escapeSql(zip) + "', @p_paymentMethod='" + escapeSql(paymentMethod) + "', @p_productId='"
+						+ escapeSql(productId) + "', @p_cardNumber='" + escapeSql(cardNumber) + "', @p_expiryDate='"
+						+ escapeSql(expiryDate) + "', @p_cvv='" + escapeSql(cvv) + "', @p_trainingId='"
+						+ escapeSql(finalTrainingIds) + "';";
 
-            // collect ALL trainingIds for this course
-            StringBuilder trainingForThisCourse = new StringBuilder();
-            if (trainingIdCsv != null && !trainingIdCsv.trim().isEmpty()) {
-                String[] all = trainingIdCsv.split(",");
-                for (int k = 0; k < all.length; k++) {
-                    String tr = all[k] != null ? all[k].trim() : "";
-                    if (tr.length() == 0) {
-                        continue;
-                    }
-                    // IMPORTANT: one course has multiple training type, so we add ALL that start with this course
-                    if (tr.startsWith(productId + "_")) {
-                        if (trainingForThisCourse.length() > 0) {
-                            trainingForThisCourse.append(",");
-                        }
-                        trainingForThisCourse.append(tr);
-                    }
-                }
-            }
-            String finalTrainingIds = trainingForThisCourse.toString();
-            logger.info("trainingIds for course/product " + productId + " = " + finalTrainingIds);
+				logger.info("value for saveEnrollmentData: " + value);
 
-            // build your SET
-            String value =
-                    "SET @p_org='" + escapeSql(orgName) +
-                    "', @p_orgDiv='" + escapeSql(orgDivision) +
-                    "', @p_createdBy='" + escapeSql(userId) +
-                    "', @p_firstName='" + escapeSql(firstName) +
-                    "', @p_lastName='" + escapeSql(lastName) +
-                    "', @p_email='" + escapeSql(email) +
-                    "', @p_address='" + escapeSql(address) +
-                    "', @p_city='" + escapeSql(city) +
-                    "', @p_zip='" + escapeSql(zip) +
-                    "', @p_paymentMethod='" + escapeSql(paymentMethod) +
-                    "', @p_productId='" + escapeSql(productId) +
-                    "', @p_cardNumber='" + escapeSql(cardNumber) +
-                    "', @p_expiryDate='" + escapeSql(expiryDate) +
-                    "', @p_cvv='" + escapeSql(cvv) +
-                    "', @p_trainingId='" + escapeSql(finalTrainingIds) + "';";
+				// call SP ONCE per course
+				em.createNamedStoredProcedureQuery("coupon_management_Routines")
+						.setParameter("actionType", "saveEnrolmentData").setParameter("actionValue", value).execute();
+			}
 
-            logger.info("value for saveEnrollmentData: " + value);
+			resp.setCode("success");
+			resp.setMessage("Enrollment completed successfully");
 
-            // call SP ONCE per course
-            em.createNamedStoredProcedureQuery("coupon_management_Routines")
-                    .setParameter("actionType", "saveEnrolmentData")
-                    .setParameter("actionValue", value)
-                    .execute();
-        }
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
 
-        resp.setCode("success");
-        resp.setMessage("Enrollment completed successfully");
+		logger.info("Method : saveEnrollmentData Dao ends");
+		return resp;
+	}
 
-    } catch (Exception e) {
-        resp.setCode("failed");
-        resp.setMessage(e.getMessage());
-        e.printStackTrace();
-    }
-
-    logger.info("Method : saveEnrollmentData Dao ends");
-    return resp;
-}
-
-private String escapeSql(String s) {
-    if (s == null) return "";
-    return s.replace("'", "''");
-}
-
+	private String escapeSql(String s) {
+		if (s == null)
+			return "";
+		return s.replace("'", "''");
+	}
 
 }
