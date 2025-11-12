@@ -4319,6 +4319,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 	    		    @StoredProcedureParameter(mode = ParameterMode.IN, name = "actionType", type = String.class),
 	    		    @StoredProcedureParameter(mode = ParameterMode.IN, name = "actionValue", type = String.class)
 	    		  }),
+	      
+	      @NamedStoredProcedureQuery(
+	    		  name = "lms_quiz_routines",
+	    		  procedureName = "lms_quiz_routines",
+	    		  parameters = {
+	    		    @StoredProcedureParameter(mode = ParameterMode.IN, name = "actionType", type = String.class),
+	    		    @StoredProcedureParameter(mode = ParameterMode.IN, name = "actionValue", type = String.class)
+	    		  }),
 		})
 
 /**

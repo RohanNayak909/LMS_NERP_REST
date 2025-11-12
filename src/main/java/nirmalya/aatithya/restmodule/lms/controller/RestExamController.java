@@ -1,5 +1,7 @@
 package nirmalya.aatithya.restmodule.lms.controller;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -289,14 +291,11 @@ public class RestExamController {
   /* ===== ADMIN: QUIZ CONFIG VIEW/EDIT ===== */
 
   @PostMapping("rest-quiz-config-add")
-  public ResponseEntity<JsonResponse<Object>> saveQuiz(
-      @RequestBody String quizData,
-      @RequestParam String userId,
-      @RequestParam String org,
-      @RequestParam String orgDiv) {
-    logger.info("rest-quiz-config-add user='{}' org='{}' div='{}'", userId, org, orgDiv);
-    return dao.saveQuiz(quizData, userId, org, orgDiv);
+  public ResponseEntity<JsonResponse<Object>> saveQuiz(@RequestBody Map<String,Object> bodyToSend) {
+      logger.info("REST ▶️ rest-quiz-config-add called with payload length={} chars");
+      return dao.saveQuiz(bodyToSend);
   }
+
 
   @GetMapping("rest-viewQuizConfig")
   public JsonResponse<Object> viewQuizConfig(@RequestParam String orgName, @RequestParam String orgDivision) {
