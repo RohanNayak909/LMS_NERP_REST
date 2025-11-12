@@ -2,7 +2,13 @@ package nirmalya.aatithya.restmodule.lms.dao;
 
 import java.math.BigInteger;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
@@ -608,21 +614,124 @@ public class RestExamDao {
   /* ===== Admin: JSON quiz config (save/view/edit) ===== */
 
   @Transactional
-  public ResponseEntity<JsonResponse<Object>> saveQuiz(String quizDataJson, String userId, String org, String orgDiv) {
-    // SP needs only @quizData — extra params are ignored (kept for compatibility)
-    JsonResponse<Object> resp = new JsonResponse<>();
-    try {
-      String value = "SET @quizData=" + (quizDataJson == null ? "NULL" : "'" + esc(quizDataJson) + "'") + ";";
-      List<?> rows = callProc("saveQuiz", value);
-      resp.setCode("success"); resp.setMessage("Saved"); resp.setBody(firstRow(rows));
-      return ResponseEntity.ok(resp);
-    } catch (Exception e) {
-      SQLException sx = unwrapSqlException(e);
-      resp.setCode("failed");
-      resp.setMessage(sx != null && "45000".equals(sx.getSQLState()) ? sx.getMessage() : e.getMessage());
-      return ResponseEntity.badRequest().body(resp);
-    }
+  @SuppressWarnings("unchecked")
+  public ResponseEntity<JsonResponse<Object>> saveQuiz(Map<String, Object> quizData) {
+      logger.info("Method : saveQuiz Starts");
+      System.out.println("Value Of the Quiz Data------------->" + quizData);
+ 
+      JsonResponse<Object> resp = new JsonResponse<>();
+ 
+      try {
+          String userId = (String) quizData.get("userId");
+          String org = (String) quizData.get("org");
+          String orgDiv = (String) quizData.get("orgDiv");
+          List<Map<String, Object>> quizList = (List<Map<String, Object>>) quizData.get("quizzes");
+ 
+          if (quizList == null || quizList.isEmpty()) {
+              resp.setCode("Failed");
+              resp.setMessage("❌ No quiz data found in request.");
+              return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+          }
+ 
+          logger.info("🧩 Received {} quiz question(s) (userId={}, org={}, orgDiv={})",
+                  quizList.size(), userId, org, orgDiv);
+ 
+          int counter = 1;
+          List<Object> savedResults = new ArrayList<>();
+          Set<String> processedSections = new HashSet<>();
+ 
+          for (Map<String, Object> quizNode : quizList) {
+ 
+              String quizCode = (String) quizNode.getOrDefault("quiz_code", "");
+              String sectionTitle = (String) quizNode.getOrDefault("section_title", "");
+ 
+              // ✅ Delete old data only once per quiz_code + section_title
+              if (!quizCode.isEmpty() && !sectionTitle.isEmpty()) {
+                  String key = quizCode + "|" + sectionTitle;
+                  if (!processedSections.contains(key)) {
+                      String deleteValue = String.format(
+                              "SET @quiz_code='%s', @section_title='%s';",
+                              quizCode.replace("'", "\\'"),
+                              sectionTitle.replace("'", "\\'")
+                      );
+                      System.out.println("Delete Value Of The Quiz---->"+deleteValue);
+                      em.createNativeQuery("CALL lms_quiz_routines(:actionType, :actionValue)")
+                              .setParameter("actionType", "deleteOldQuizData")
+                              .setParameter("actionValue", deleteValue)
+                              .executeUpdate();
+                      logger.info("🧹 Deleted old data for quiz='{}' section='{}'", quizCode, sectionTitle);
+                      processedSections.add(key);
+                  }
+              }
+ 
+              // ✅ Extract options and rationales
+              List<Map<String, Object>> options = (List<Map<String, Object>>) quizNode.get("options");
+              Map<String, String> optMap = new HashMap<>();
+              Map<String, String> ratMap = new HashMap<>();
+ 
+              if (options != null) {
+                  for (Map<String, Object> opt : options) {
+                      String label = opt.get("option").toString(); // A/B/C/D
+                      String text = opt.get("text") != null ? opt.get("text").toString() : "";
+                      String rationale = opt.get("rationale") != null ? opt.get("rationale").toString() : "";
+                      optMap.put(label, text);
+                      ratMap.put(label, rationale);
+                  }
+              }
+ 
+              // ✅ Prepare SQL variable assignment string
+              String actionValue = String.format(
+                      "SET @quiz_code='%s', @section_title='%s', @question_text='%s', " +
+                      "@option_a='%s', @option_b='%s', @option_c='%s', @option_d='%s', " +
+                      "@rationale_a='%s', @rationale_b='%s', @rationale_c='%s', @rationale_d='%s', " +
+                      "@right_answer='%s', @syllabus_ref='%s';",
+                      safeStr(quizNode.get("quiz_code")),
+                      safeStr(quizNode.get("section_title")),
+                      safeStr(quizNode.get("question_text")),
+                      safeStr(optMap.get("A")),
+                      safeStr(optMap.get("B")),
+                      safeStr(optMap.get("C")),
+                      safeStr(optMap.get("D")),
+                      safeStr(ratMap.get("A")),
+                      safeStr(ratMap.get("B")),
+                      safeStr(ratMap.get("C")),
+                      safeStr(ratMap.get("D")),
+                      safeStr(quizNode.get("right_answer")),
+                      safeStr(quizNode.get("syllabus_ref"))
+              );
+ 
+              logger.info("🧠 [Record {}] Executing saveQuiz for quiz='{}' section='{}'", counter, quizCode, sectionTitle);
+              System.out.println("Value for SQL ---> " + actionValue);
+ 
+              // ✅ Call stored procedure
+              Object result = em.createNativeQuery("CALL lms_quiz_routines(:actionType, :actionValue)")
+                      .setParameter("actionType", "saveQuiz")
+                      .setParameter("actionValue", actionValue)
+                      .executeUpdate();
+ 
+              savedResults.add(result);
+              logger.info("✅ [Record {}] Quiz saved successfully", counter);
+ 
+              counter++;
+          }
+ 
+          resp.setBody(savedResults);
+          resp.setCode("success");
+          resp.setMessage("✅ " + quizList.size() + " quiz question(s) saved successfully.");
+ 
+      } catch (Exception e) {
+          logger.error("❌ Error in saveQuiz: ", e);
+          resp.setCode("Failed");
+          resp.setMessage("Error while saving quiz: " + e.getMessage());
+      }
+ 
+      logger.info("Method : saveQuiz Ends");
+      return new ResponseEntity<>(resp, HttpStatus.CREATED);
   }
+  private String safeStr(Object val) {
+      return val == null ? "" : val.toString().replace("'", "\\'");
+  }
+ 
 
   /** SP returns one JSON aggregate row. org args are ignored by SP; kept in signature for compatibility. */
   public JsonResponse<Object> viewQuizConfig(String orgName, String orgDivision) {
