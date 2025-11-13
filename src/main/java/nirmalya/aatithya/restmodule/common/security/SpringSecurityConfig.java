@@ -111,6 +111,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 
                 .antMatchers("/gstreturn/**").permitAll()
 				.antMatchers("/gst/**").permitAll()
+				.antMatchers("/otp/**").permitAll()
 
                 
                 .antMatchers("/api/getClientDetails").permitAll()
@@ -235,7 +236,6 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 	  
 			  // ===== Diagnostics (optional; remove/tighten in prod) =====
 			  .antMatchers("/master/rest-exam-ping").permitAll()
-			  .antMatchers("/diag/**").permitAll()
 
 
 			  .antMatchers("/master/mail/send").permitAll()
@@ -243,6 +243,16 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 			  .antMatchers("/master/mail/send-bulk").permitAll()
 
 			  .antMatchers("/master/mail/preview").permitAll()
+
+
+
+
+
+			  .antMatchers("/otp/request").permitAll()
+
+			  .antMatchers("/otp/verify").permitAll()
+			  .antMatchers("/diag/**").permitAll()
+
 
         // .antMatchers("/master/rest-exam-eligibility", "/diag/**").permitAll()
 

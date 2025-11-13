@@ -86,14 +86,14 @@ public class MailService {
 		javaMailSender.send(mimeMessage);
 	}
 	
-	public void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException {
+	public void sendHtmlEmail(String to, String subject, String htmlContent, String from) throws MessagingException {
 	    MimeMessage message = javaMailSender.createMimeMessage();
 	    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
 	    helper.setTo(to);
 	    helper.setSubject(subject);
 	    helper.setText(htmlContent, true);
-
+		helper.setFrom(from);
 	    javaMailSender.send(message);
 	    System.out.println("HTML Email sent to: " + to);
 	}
