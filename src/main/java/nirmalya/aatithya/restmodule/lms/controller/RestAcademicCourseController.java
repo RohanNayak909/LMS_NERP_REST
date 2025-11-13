@@ -263,7 +263,30 @@ public class RestAcademicCourseController {
 		return academicCourseDao.getadminAllHeadCount(orgName,orgDivision,userId);
 
 	}
-	
+	@PostMapping(value = "rest-add-coupon")
+	public JsonResponse<Object> saveCouponDetails(@RequestBody Map<String,Object>payload) {
+		logger.info("Method :saveCouponDetails start");
+
+		logger.info("Method :saveCouponDetails endss");
+		return academicCourseDao.saveCouponDetails(payload);
+
+	}
+	@PostMapping(value = "rest-delete-coupon")
+	public JsonResponse<Object> deleteCoupon(@RequestBody Map<String,Object>payload) {
+		logger.info("Method :deleteCoupon start");
+
+		logger.info("Method :deleteCoupon endss");
+		return academicCourseDao.deleteCoupon(payload);
+
+	}
+	@RequestMapping(value = "rest-get-reccent-courses", method = { RequestMethod.GET })
+	public JsonResponse<Object> getRecentPurchaseCourses(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String userId) {
+		logger.info("Method :getRecentPurchaseCourses start");
+
+		logger.info("Method :getRecentPurchaseCourses endss");
+		return academicCourseDao.getRecentPurchaseCourses(orgName,orgDivision,userId);
+
+	}
 	@PostMapping(value = "rest-academic-course-quiz-save")
     public ResponseEntity<JsonResponse<Object>> saveQuizMappings(@RequestBody String quizData, @RequestParam String userId,
             @RequestParam String org, @RequestParam String orgDiv) {
@@ -273,4 +296,11 @@ public class RestAcademicCourseController {
     }
 	
 
+	
+	@RequestMapping(value = "rest-viewPublicBatches", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewPublicBatches(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :viewPublicBatches start");
+		logger.info("Method :viewPublicBatches endss");
+		return academicCourseDao.viewPublicBatches(orgName, orgDivision,id);
+	}
 }

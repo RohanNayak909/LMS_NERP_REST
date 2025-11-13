@@ -180,6 +180,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 				
 				.antMatchers("/his/rest-getAllUserTraining").permitAll()
 				
+				.antMatchers("/his/rest-viewPublicBatches").permitAll()
+				
 				.antMatchers("/user/getUserByUsernameLMS").permitAll()
 				
                 

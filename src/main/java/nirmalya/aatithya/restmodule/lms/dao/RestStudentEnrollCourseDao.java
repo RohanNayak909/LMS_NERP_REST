@@ -92,46 +92,105 @@ import org.json.JSONObject;
 	}
 	
 	
+	/*
+	 * @SuppressWarnings("unchecked") public JsonResponse<Object>
+	 * saveUserDatalms(String orgName, String orgDivision, String userId, String
+	 * data) { logger.info("Method : saveUserData Dao starts" + data);
+	 * 
+	 * JsonResponse<Object> resp = new JsonResponse<Object>();
+	 * 
+	 * JSONObject jsonObj = new JSONObject(data); try { String encodedPassword="";
+	 * String firstName = jsonObj.optString("firstName"); String lastName =
+	 * jsonObj.optString("lastName"); String dob = jsonObj.optString("dob"); String
+	 * nationality = jsonObj.optString("nationality"); String gender =
+	 * jsonObj.optString("gender"); String email = jsonObj.optString("email");
+	 * String phone = jsonObj.optString("phone"); String password =
+	 * jsonObj.optString("password"); encodedPassword= passEncoder.encode(password);
+	 * 
+	 * 
+	 * String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision +
+	 * "',@p_createdBy='" + userId + "', @p_firstName='" + firstName +
+	 * "', @p_lastName='" + lastName + "', @p_dob='" + dob + "', @p_nationality='" +
+	 * nationality + "', @p_gender='" + gender + "', @p_email='" + email +
+	 * "', @p_phone='" + phone + "', @p_password='" + password +
+	 * "',@p_encodedPassword='" + encodedPassword + "';";
+	 * 
+	 * logger.info("value for items for saveUserData===================>" + value);
+	 * List<Object[]> x =
+	 * em.createNamedStoredProcedureQuery("coupon_management_Routines")
+	 * .setParameter("actionType", "saveUserData").setParameter("actionValue",
+	 * value).getResultList();
+	 * 
+	 * resp.setBody(x.get(0)); resp.setCode("success");
+	 * resp.setMessage("User Registered Successfully");
+	 * 
+	 * } catch (Exception e) { resp.setCode("failed");
+	 * resp.setMessage(e.getMessage()); e.printStackTrace(); }
+	 * logger.info("Method : saveUserData Dao ends"); return resp; }
+	 */
+	
+	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> saveUserDatalms(String orgName, String orgDivision, String userId, String data) {
-		logger.info("Method : saveUserData Dao starts" + data);
+	    logger.info("Method : saveUserData Dao starts" + data);
 
-		JsonResponse<Object> resp = new JsonResponse<Object>();
-		
-		JSONObject jsonObj = new JSONObject(data);
-		try {
-			String encodedPassword="";
-			String firstName = jsonObj.optString("firstName");
-			String lastName = jsonObj.optString("lastName");
-			String dob = jsonObj.optString("dob");
-			String nationality = jsonObj.optString("nationality");
-			String gender = jsonObj.optString("gender");
-			String email = jsonObj.optString("email");
-			String phone = jsonObj.optString("phone");
-			String password = jsonObj.optString("password");
-			encodedPassword= passEncoder.encode(password);
-			
+	    JsonResponse<Object> resp = new JsonResponse<Object>();
 
-			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_createdBy='" + userId
-					+ "', @p_firstName='" + firstName
-					+ "', @p_lastName='" + lastName + "', @p_dob='" + dob + "', @p_nationality='" + nationality + "', @p_gender='" + gender + "', @p_email='" + email + "', @p_phone='" + phone + "', @p_password='" + password + "',@p_encodedPassword='" + encodedPassword + "';";
+	    try {
+	        JSONObject jsonObj = new JSONObject(data);
 
-			logger.info("value for items for saveUserData===================>" + value);
-			List<Object[]> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
-					.setParameter("actionType", "saveUserData").setParameter("actionValue", value).getResultList();
+	        String encodedPassword = "";
+	        String firstName = jsonObj.optString("firstName");
+	        String lastName = jsonObj.optString("lastName");
+	        String dob = jsonObj.optString("dob");
+	        String nationality = jsonObj.optString("nationality");
+	        String gender = jsonObj.optString("gender");
+	        String email = jsonObj.optString("email");
+	        String phone = jsonObj.optString("phone");
+	        String password = jsonObj.optString("password");
+	        String type = jsonObj.optString("type", "Normal User"); // <-- new type field (can be null or 'public batches')
 
-			resp.setBody(x.get(0));
-			resp.setCode("success");
-			resp.setMessage("User Registered Successfully");
+	        // Encode password
+	        encodedPassword = passEncoder.encode(password);
 
-		} catch (Exception e) {
-			resp.setCode("failed");
-			resp.setMessage(e.getMessage());
-			e.printStackTrace();
-		}
-		logger.info("Method : saveUserData Dao ends");
-		return resp;
+	        // Construct parameter string for stored procedure
+	        String value = "SET @p_org='" + orgName + 
+	                       "', @p_orgDiv='" + orgDivision + 
+	                       "', @p_createdBy='" + userId +
+	                       "', @p_firstName='" + firstName +
+	                       "', @p_lastName='" + lastName +
+	                       "', @p_dob='" + dob +
+	                       "', @p_nationality='" + nationality +
+	                       "', @p_gender='" + gender +
+	                       "', @p_email='" + email +
+	                       "', @p_phone='" + phone +
+	                       "', @p_password='" + password +
+	                       "', @p_encodedPassword='" + encodedPassword + 
+	                       "', @p_type=" + (type != "'Normal User'" ? ("'" + type + "'") : "Normal User") + ";"; // <-- safely handle null
+
+	        logger.info("Value for saveUserData===================>" + value);
+
+	        // Execute stored procedure
+	        List<Object[]> result = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+	                .setParameter("actionType", "saveUserData")
+	                .setParameter("actionValue", value)
+	                .getResultList();
+
+	        // Prepare response
+	        resp.setBody(result.get(0));
+	        resp.setCode("success");
+	        resp.setMessage("User Registered Successfully");
+
+	    } catch (Exception e) {
+	        resp.setCode("failed");
+	        resp.setMessage(e.getMessage());
+	        logger.error("Error in saveUserData Dao: ", e);
+	    }
+
+	    logger.info("Method : saveUserData Dao ends");
+	    return resp;
 	}
+
 	
 	
 // 	@SuppressWarnings("unchecked")
