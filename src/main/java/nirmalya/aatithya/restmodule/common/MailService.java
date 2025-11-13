@@ -2,21 +2,12 @@ package nirmalya.aatithya.restmodule.common;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
 
-import javax.mail.Authenticator;
-import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
 import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
@@ -24,141 +15,101 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import javax.mail.internet.MimeMessage;
+
 @Service
 public class MailService {
-	/*
-	 * The Spring Framework provides an easy abstraction for sending email by using
-	 * the JavaMailSender interface, and Spring Boot provides auto-configuration for
-	 * it as well as a starter module.
-	 */
-	private JavaMailSender javaMailSender;
 
-	/**
-	 * 
-	 * @param javaMailSender
-	 */
-	@Autowired
-	public MailService(JavaMailSender javaMailSender) {
-		this.javaMailSender = javaMailSender;
-	}
+    /*
+     * The Spring Framework provides an easy abstraction for sending email by using
+     * the JavaMailSender interface, and Spring Boot provides auto-configuration for
+     * it as well as a starter module.
+     */
+    private final JavaMailSender javaMailSender;
+    private final String from;
+    private final String fromName;
 
-	/**
-	 * This function is used to send mail without attachment.
-	 * 
-	 * @param user
-	 * @throws MailException
-	 */
+    /**
+     * Inject JavaMailSender + Environment to derive From header
+     */
+    @Autowired
+    public MailService(JavaMailSender javaMailSender, Environment env) {
+        this.javaMailSender = javaMailSender;
+        this.from = env.getProperty("app.mail.from",
+                env.getProperty("spring.mail.username", "info@ducisgroup.com"));
+        this.fromName = env.getProperty("app.mail.fromName", "Ducis Group");
+    }
 
-	public void sendEmail(String myEmail, String Subject, String text) throws MailException {
-		SimpleMailMessage mail = new SimpleMailMessage();
-		mail.setTo(myEmail);
-		mail.setSubject(Subject);
-		mail.setText(text);
-		
-		System.out.println("myEmail "+myEmail);
-		/*
-		 * This send() contains an Object of SimpleMailMessage as an Parameter
-		 */
-		javaMailSender.send(mail);
-	}
+    /**
+     * Send plain-text mail (no attachment)
+     */
+    public void sendEmail(String myEmail, String subject, String text) throws MailException {
+        SimpleMailMessage mail = new SimpleMailMessage();
+        mail.setTo(myEmail);
+        mail.setSubject(subject);
+        mail.setText(text);
+        mail.setFrom(String.format("%s <%s>", fromName, from));
 
-	/**
-	 * This fucntion is used to send mail that contains a attachment.
-	 * 
-	 * @param user
-	 * @throws MailException
-	 * @throws MessagingException
-	 */
-	public void sendEmailWithAttachment(String myEmail, String Subject, String text)
-			throws MailException, MessagingException {
+        System.out.println("myEmail " + myEmail);
+        javaMailSender.send(mail);
+    }
 
-		MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+    /**
+     * Send mail with a static PDF attachment (example)
+     */
+    public void sendEmailWithAttachment(String myEmail, String subject, String text)
+            throws MailException, MessagingException {
 
-		MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
 
-		helper.setTo(myEmail);
-		helper.setSubject(Subject);
-		helper.setText(text);
+        helper.setTo(myEmail);
+        helper.setSubject(subject);
+        helper.setText(text);
+        helper.setFrom(String.format("%s <%s>", fromName, from));
 
-		ClassPathResource classPathResource = new ClassPathResource("Attachment.pdf");
-		helper.addAttachment(classPathResource.getFilename(), classPathResource);
+        ClassPathResource classPathResource = new ClassPathResource("Attachment.pdf");
+        helper.addAttachment(classPathResource.getFilename(), classPathResource);
 
-		javaMailSender.send(mimeMessage);
-	}
-	
-	public void sendHtmlEmail(String to, String subject, String htmlContent, String from) throws MessagingException {
-	    MimeMessage message = javaMailSender.createMimeMessage();
-	    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        javaMailSender.send(mimeMessage);
+    }
 
-	    helper.setTo(to);
-	    helper.setSubject(subject);
-	    helper.setText(htmlContent, true);
-		helper.setFrom(from);
-	    javaMailSender.send(message);
-	    System.out.println("HTML Email sent to: " + to);
-	}
-	//sendEmailOnlyText
-			public static void sendEmailOnlyText(String host, String port, final String addresses, final String password,
-					List<String> toAddress, List<String> ccAddress, String subject, String message, String urlName,String urlName1)
-					throws AddressException, MessagingException {
-				
-				// sets SMTP server properties
-				Properties properties = new Properties();
-				properties.put("mail.smtp.host", host);
-				properties.put("mail.smtp.port", port);
-				properties.put("mail.smtp.auth", "true");
-				properties.put("mail.smtp.starttls.enable", "true");
-				properties.put("mail.user", addresses);
-				properties.put("mail.password", password);
+    /**
+     * Send HTML email using configured from-address.
+     * NOTE: 'from' parameter is kept for backward compatibility but ignored.
+     */
+    public void sendHtmlEmail(String to, String subject, String htmlContent, String fromIgnored)
+            throws MessagingException {
 
-				// creates a new session with an authenticator
-				Authenticator auth = new Authenticator() {
-					public PasswordAuthentication getPasswordAuthentication() {
-						return new PasswordAuthentication(addresses, password);
-					}
-				};
-				Session session = Session.getInstance(properties, auth);
+        MimeMessage message = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-				// creates a new e-mail message
-				Message msg = new MimeMessage(session);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(htmlContent, true);
+        helper.setFrom(String.format("%s <%s>", fromName, from));
 
-				msg.setFrom(new InternetAddress(addresses));
+        javaMailSender.send(message);
+        System.out.println("HTML Email sent to: " + to);
+    }
 
-				InternetAddress[] toAddresses = new InternetAddress[toAddress.size()];
-				int counter = 0;
-				for (String toAddress1 : toAddress) {
-					toAddresses[counter] = new InternetAddress(toAddress1.trim());
-					counter++;
-				}
-				if (ccAddress != null) {
-					InternetAddress[] ccAddresses = new InternetAddress[ccAddress.size()];
-					int counter1 = 0;
-					for (String ccAddress1 : ccAddress) {
-						ccAddresses[counter1] = new InternetAddress(ccAddress1.trim());
-						counter1++;
-					}
-					msg.setRecipients(Message.RecipientType.CC, ccAddresses);
-				}
-				msg.setRecipients(Message.RecipientType.TO, toAddresses);
+    /**
+     * Deprecated manual SMTP method – disables custom host/user/password usage
+     * so everything goes via Spring's JavaMailSender (Office 365 config).
+     */
+    public static void sendEmailOnlyText(
+            String host,
+            String port,
+            final String addresses,
+            final String password,
+            List<String> toAddress,
+            List<String> ccAddress,
+            String subject,
+            String message,
+            String urlName,
+            String urlName1) throws AddressException, MessagingException {
 
-				msg.setSubject(subject);
-				msg.setSentDate(new Date());
-
-				// creates message part
-				MimeBodyPart messageBodyPart = new MimeBodyPart();
-				//messageBodyPart.setContent(message, "text/plain");
-				messageBodyPart.setContent(message, "text/html");  // For HTML formatted email
-
-				// Create the Multipart object to hold the email content
-		        MimeMultipart multipart = new MimeMultipart();
-
-		        multipart.addBodyPart(messageBodyPart);
-
-				// sets the multi-part as e-mail's content
-				msg.setContent(multipart);
-
-				// sends the e-mail
-				Transport.send(msg);
-
-			}
+        throw new UnsupportedOperationException(
+                "Deprecated: sendEmailOnlyText is disabled. Use JavaMailSender-based methods instead.");
+    }
 }

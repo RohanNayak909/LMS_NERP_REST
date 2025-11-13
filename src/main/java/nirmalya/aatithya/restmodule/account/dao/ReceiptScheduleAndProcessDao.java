@@ -19,6 +19,7 @@ public class ReceiptScheduleAndProcessDao {
 
 	@Autowired
 	EntityManager em;
+	
 	@Autowired
 	ServerDao serverDao;
 
