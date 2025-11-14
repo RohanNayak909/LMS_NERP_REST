@@ -401,12 +401,15 @@ public class RestCrmLeadsDao {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public JsonResponse viewLeadDet(String pageno, String userId, String orgName, String orgDivision,String fromDate,String toDate) {
+	public JsonResponse viewLeadDet(String pageno, String userId, String orgName, String orgDivision) {
 		logger.info("Method : viewLeadDet starts");
 		JsonResponse jsonResp = new JsonResponse();
 
-		String value = "SET @p_pageno='" + pageno + "',@p_userId='" + userId + "'," + "@p_orgName='" + orgName
-				+ "',@p_orgDivision='" + orgDivision + "',@p_fromDate='"+fromDate+"',@p_todate='"+toDate+"';";
+		String value = "SET @p_pageno='" + pageno + 
+	               "', @p_userId='" + userId + 
+	               "', @p_orgName='" + orgName + 
+	               "', @p_orgDivision='" + orgDivision + "';";
+
 		System.out.println("Value For View Lead======>" + value);
 		try {
 

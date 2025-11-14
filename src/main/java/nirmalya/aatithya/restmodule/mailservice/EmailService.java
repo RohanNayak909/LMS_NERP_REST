@@ -61,7 +61,7 @@ public class EmailService {
 
   @Scheduled(fixedDelay = 15000, initialDelay = 5000)
   public void processQueue() {
-    logger.info("processing email queue");
+  //  logger.info("processing email queue");
     List<Map<String, Object>> rows = dao.fetchPendingBatch(25);
     for (Map<String, Object> row : rows) {
       long id = (Long) row.get("id");
