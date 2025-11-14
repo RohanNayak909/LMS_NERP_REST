@@ -63,7 +63,7 @@ public class EmailService {
 
   /* ===================== QUEUE PROCESSOR ===================== */
 
-  @Scheduled(fixedDelay = 15000, initialDelay = 5000)
+//  @Scheduled(fixedDelay = 15000, initialDelay = 5000)
   public void processQueue() {
     logger.info("Processing email queue...");
     List<Map<String, Object>> rows = dao.fetchPendingBatch(25);
