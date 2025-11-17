@@ -226,6 +226,8 @@ public class CoursePaymentDao {
     );
   }
 
+
+  
   /* ------------ helpers ------------ */
 
   private String asString(Object o) {
