@@ -165,7 +165,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/api/viewClassifiedBillSearchApi").permitAll()
                 .antMatchers("/purchase/**").permitAll()
                 .antMatchers("/edms/**").permitAll()
-                
+				.antMatchers("/master/payment/**").permitAll()
 
 				.antMatchers("/grc/**").permitAll()
 				.antMatchers("/maintenance/**").permitAll()
@@ -247,7 +247,10 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 			  .antMatchers("/master/mail/preview").permitAll()
 
 
+			
+			  .antMatchers("/master/payment/retake/create").permitAll()
 
+			  .antMatchers("/master/payment/retake/confirm").permitAll()
 
 
 			  .antMatchers("/otp/request").permitAll()
