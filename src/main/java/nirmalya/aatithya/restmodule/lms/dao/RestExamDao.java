@@ -153,8 +153,16 @@ public class RestExamDao {
 
   @Transactional
   public ResponseEntity<JsonResponse<Object>> productStart(
-      String orgName, String orgDivision, String userId, String productId,
-      Integer trainingId, String mode, Integer seed, String metaJson) {
+      String orgName,
+      String orgDivision,
+      String userId,
+      String productId,
+      Integer trainingId,
+      String mode,
+      Integer seed,
+      String metaJson,
+      String quizCode // 🔹 NEW
+  ) {
 
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
@@ -166,7 +174,8 @@ public class RestExamDao {
         .append("@p_training_id=").append(trainingId == null ? "NULL" : trainingId).append(",")
         .append("@p_mode=").append(mode == null ? "'MOCK'" : "'" + esc(mode) + "'").append(",")
         .append("@p_seed=").append(seed == null ? "NULL" : seed).append(",")
-        .append("@p_meta_json=").append(metaJson == null ? "NULL" : "'" + esc(metaJson) + "'")
+        .append("@p_meta_json=").append(metaJson == null ? "NULL" : "'" + esc(metaJson) + "'").append(",")
+        .append("@p_quiz_code=").append(quizCode == null ? "NULL" : "'" + esc(quizCode) + "'")
         .append(";")
         .toString();
 
@@ -397,7 +406,6 @@ public class RestExamDao {
   public JsonResponse<Object> outline(String productId) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      // SP returns first result-set = quiz header (second set is sections). We keep questions in a separate endpoint.
       String value = "SET @p_product_id='" + esc(productId) + "';";
       List<?> rows = callProc("outline", value);
       ok(resp, rows);
@@ -618,33 +626,33 @@ public class RestExamDao {
   public ResponseEntity<JsonResponse<Object>> saveQuiz(Map<String, Object> quizData) {
       logger.info("Method : saveQuiz Starts");
       System.out.println("Value Of the Quiz Data------------->" + quizData);
- 
+
       JsonResponse<Object> resp = new JsonResponse<>();
- 
+
       try {
           String userId = (String) quizData.get("userId");
           String org = (String) quizData.get("org");
           String orgDiv = (String) quizData.get("orgDiv");
           List<Map<String, Object>> quizList = (List<Map<String, Object>>) quizData.get("quizzes");
- 
+
           if (quizList == null || quizList.isEmpty()) {
               resp.setCode("Failed");
               resp.setMessage("❌ No quiz data found in request.");
               return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
           }
- 
+
           logger.info("🧩 Received {} quiz question(s) (userId={}, org={}, orgDiv={})",
                   quizList.size(), userId, org, orgDiv);
- 
+
           int counter = 1;
           List<Object> savedResults = new ArrayList<>();
           Set<String> processedSections = new HashSet<>();
- 
+
           for (Map<String, Object> quizNode : quizList) {
- 
+
               String quizCode = (String) quizNode.getOrDefault("quiz_code", "");
               String sectionTitle = (String) quizNode.getOrDefault("section_title", "");
- 
+
               // ✅ Delete old data only once per quiz_code + section_title
               if (!quizCode.isEmpty() && !sectionTitle.isEmpty()) {
                   String key = quizCode + "|" + sectionTitle;
@@ -663,12 +671,12 @@ public class RestExamDao {
                       processedSections.add(key);
                   }
               }
- 
+
               // ✅ Extract options and rationales
               List<Map<String, Object>> options = (List<Map<String, Object>>) quizNode.get("options");
               Map<String, String> optMap = new HashMap<>();
               Map<String, String> ratMap = new HashMap<>();
- 
+
               if (options != null) {
                   for (Map<String, Object> opt : options) {
                       String label = opt.get("option").toString(); // A/B/C/D
@@ -678,7 +686,7 @@ public class RestExamDao {
                       ratMap.put(label, rationale);
                   }
               }
- 
+
               // ✅ Prepare SQL variable assignment string
               String actionValue = String.format(
                       "SET @quiz_code='%s', @section_title='%s', @question_text='%s', " +
@@ -699,39 +707,39 @@ public class RestExamDao {
                       safeStr(quizNode.get("right_answer")),
                       safeStr(quizNode.get("syllabus_ref"))
               );
- 
+
               logger.info("🧠 [Record {}] Executing saveQuiz for quiz='{}' section='{}'", counter, quizCode, sectionTitle);
               System.out.println("Value for SQL ---> " + actionValue);
- 
+
               // ✅ Call stored procedure
               Object result = em.createNativeQuery("CALL lms_quiz_routines(:actionType, :actionValue)")
                       .setParameter("actionType", "saveQuiz")
                       .setParameter("actionValue", actionValue)
                       .executeUpdate();
- 
+
               savedResults.add(result);
               logger.info("✅ [Record {}] Quiz saved successfully", counter);
- 
+
               counter++;
           }
- 
+
           resp.setBody(savedResults);
           resp.setCode("success");
           resp.setMessage("✅ " + quizList.size() + " quiz question(s) saved successfully.");
- 
+
       } catch (Exception e) {
           logger.error("❌ Error in saveQuiz: ", e);
           resp.setCode("Failed");
           resp.setMessage("Error while saving quiz: " + e.getMessage());
       }
- 
+
       logger.info("Method : saveQuiz Ends");
       return new ResponseEntity<>(resp, HttpStatus.CREATED);
   }
+
   private String safeStr(Object val) {
       return val == null ? "" : val.toString().replace("'", "\\'");
   }
- 
 
   /** SP returns one JSON aggregate row. org args are ignored by SP; kept in signature for compatibility. */
   public JsonResponse<Object> viewQuizConfig(String orgName, String orgDivision) {

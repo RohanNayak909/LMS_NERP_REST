@@ -1,4 +1,3 @@
-
 package nirmalya.aatithya.restmodule.lms.controller;
 
 import java.util.Map;
@@ -64,15 +63,33 @@ public class RestExamController {
     return dao.retakeStatus(userId, productId, trainingId, mode);
   }
 
+  /**
+   * Start / resume an attempt.
+   * Optional quizCode lets UI choose specific mapped quiz (Mock 1 vs Mock 2).
+   */
   @PostMapping("rest-exam-start")
   public ResponseEntity<JsonResponse<Object>> start(
-      @RequestParam String orgName, @RequestParam String orgDivision,
-      @RequestParam String userId, @RequestParam String productId,
+      @RequestParam String orgName,
+      @RequestParam String orgDivision,
+      @RequestParam String userId,
+      @RequestParam String productId,
       @RequestParam(required = false) Integer trainingId,
       @RequestParam(required = false, defaultValue = "MOCK") String mode,
       @RequestParam(required = false) Integer seed,
-      @RequestParam(required = false) String metaJson) {
-    return dao.productStart(orgName, orgDivision, userId, productId, trainingId, mode, seed, metaJson);
+      @RequestParam(required = false) String metaJson,
+      @RequestParam(required = false) String quizCode // 🔹 NEW
+  ) {
+    return dao.productStart(
+        orgName,
+        orgDivision,
+        userId,
+        productId,
+        trainingId,
+        mode,
+        seed,
+        metaJson,
+        quizCode
+    );
   }
 
   @GetMapping("rest-exam-get-question")
