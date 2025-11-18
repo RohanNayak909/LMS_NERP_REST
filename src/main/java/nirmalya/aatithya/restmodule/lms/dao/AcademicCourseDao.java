@@ -163,6 +163,16 @@ public class AcademicCourseDao {
 	                    // Do NOT escape \ or ' here - let JSON handle it, and escape ' for SQL later on the full payload
 	                    obj.addProperty("content", content);
 	                }
+	                // Optionally, ensure no documentFile remnants in JSON (already removed upstream)
+	                if (obj.has("documents")) {
+	                    JsonArray docsArray = obj.getAsJsonArray("documents");
+	                    for (int j = 0; j < docsArray.size(); j++) {
+	                        JsonObject docObj = docsArray.get(j).getAsJsonObject();
+	                        if (docObj.has("documentFile")) {
+	                            docObj.remove("documentFile");
+	                        }
+	                    }
+	                }
 	            }
 
 	            // Replace categoryData with cleaned array
