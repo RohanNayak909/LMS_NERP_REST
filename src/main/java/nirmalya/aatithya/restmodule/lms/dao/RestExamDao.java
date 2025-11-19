@@ -133,14 +133,16 @@ public class RestExamDao {
     return resp;
   }
 
-  public JsonResponse<Object> retakeStatus(String userId, String productId, Integer trainingId, String mode) {
+  public JsonResponse<Object> retakeStatus(String userId, String productId, Integer trainingId, String mode,String quizCode) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
       String value =
           "SET @p_user_id='" + esc(userId) + "'," +
           "@p_product_id='" + esc(productId) + "'," +
           "@p_training_id=" + (trainingId == null ? "NULL" : trainingId) + "," +
-          "@p_mode='" + esc(mode == null ? "MOCK" : mode) + "';";
+          "@p_mode='" + esc(mode == null ? "MOCK" : mode) + "'," +
+          "@p_quiz_code='"+esc(quizCode)+"';";
+      logger.info(value);
       List<?> rows = callProc("retakeStatus", value);
       ok(resp, rows);
     } catch (Exception e) {
@@ -415,11 +417,13 @@ public class RestExamDao {
     return resp;
   }
 
-  public JsonResponse<Object> questionList(String productId) {
+  public JsonResponse<Object> questionList(String productId , String quizCode) {
     JsonResponse<Object> resp = new JsonResponse<>();
     try {
-      String value = "SET @p_product_id='" + esc(productId) + "';";
+      String value = "SET @p_product_id='" + esc(productId) + "', @p_quiz_code='"+esc(quizCode)+"';";
+      logger.info(value);    
       List<?> rows = callProc("questionList", value);
+      
       ok(resp, rows);
     } catch (Exception e) {
       resp.setCode("failed"); resp.setMessage(e.getMessage());

@@ -59,8 +59,9 @@ public class RestExamController {
   public JsonResponse<Object> retakeStatus(
       @RequestParam String userId, @RequestParam String productId,
       @RequestParam(required = false) Integer trainingId,
-      @RequestParam(required = false, defaultValue = "MOCK") String mode) {
-    return dao.retakeStatus(userId, productId, trainingId, mode);
+      @RequestParam(required = false, defaultValue = "MOCK") String mode,
+      @RequestParam String quizCode) {
+    return dao.retakeStatus(userId, productId, trainingId, mode,quizCode);
   }
 
   /**
@@ -180,8 +181,8 @@ public class RestExamController {
   }
 
   @GetMapping("rest-product-questions")
-  public JsonResponse<Object> questions(@RequestParam String productId) {
-    return dao.questionList(productId);
+  public JsonResponse<Object> questions(@RequestParam String productId,@RequestParam String quizCode) {
+    return dao.questionList(productId,quizCode);
   }
 
   /* ======================= REPORTS ======================= */
