@@ -74,6 +74,7 @@ public class ExamPaymentDao {
     sb.append("@p_order_code='").append(orderCode).append("'");
 
     String actionValue = sb.toString();
+    System.out.println("Action Value----->"+actionValue);
 
     jdbc.query(
         "CALL lms_exam_routines(?,?)",
