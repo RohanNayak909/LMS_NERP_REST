@@ -142,13 +142,12 @@ public class RestAcademicCourseController {
 
 	// viewStudent
 	@RequestMapping(value = "rest-subscription-student-view", method = RequestMethod.GET)
-	public JsonResponse<Object> viewStudent(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam(required = false) String userId) {
+	public JsonResponse<Object> viewStudent(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String id) {
 		logger.info("Method : viewStudent Controller start");
-		JsonResponse<Object> response = academicCourseDao.viewStudent(orgName, orgDivision,userId);
+		JsonResponse<Object> response = academicCourseDao.viewStudent(orgName, orgDivision,id);
 		logger.info("Method : viewStudent Controller end");
 		return response;
 	}
-
 	// enable
 	@GetMapping("rest-subscription-student-course-enable")
 	public JsonResponse<Object> enableCourse(@RequestParam String id, @RequestParam String status) {
