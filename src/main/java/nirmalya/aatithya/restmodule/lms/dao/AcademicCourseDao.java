@@ -494,13 +494,13 @@ public class AcademicCourseDao {
 
 	// viewStudent
 	@SuppressWarnings("unchecked")
-	public JsonResponse<Object> viewStudent(String orgName, String orgDivision,String id) {
+	public JsonResponse<Object> viewStudent(String orgName, String orgDivision,String userId) {
 		logger.info("Method : viewStudent Dao starts");
 
 		JsonResponse<Object> resp = new JsonResponse<Object>();
 
 		try {
-			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='"+id+"';";
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='"+userId+"';";
 			System.out.println("aaaaaaaaaaaaaaaaaaa: " + value);
 
 			List<Object[]> result = em.createNamedStoredProcedureQuery("academic_course_routines")
