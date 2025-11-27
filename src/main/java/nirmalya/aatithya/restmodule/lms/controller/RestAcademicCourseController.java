@@ -286,6 +286,14 @@ public class RestAcademicCourseController {
 		return academicCourseDao.getRecentPurchaseCourses(orgName,orgDivision,userId);
 
 	}
+	@RequestMapping(value = "rest-get-excel-data", method = { RequestMethod.GET })
+	public JsonResponse<Object> getExcelData(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :getExcelData start");
+
+		logger.info("Method :getExcelData endss");
+		return academicCourseDao.getExcelData(orgName,orgDivision,id);
+
+	}
 	@PostMapping(value = "rest-academic-course-quiz-save")
     public ResponseEntity<JsonResponse<Object>> saveQuizMappings(@RequestBody String quizData, @RequestParam String userId,
             @RequestParam String org, @RequestParam String orgDiv) {
@@ -302,4 +310,12 @@ public class RestAcademicCourseController {
 		logger.info("Method :viewPublicBatches endss");
 		return academicCourseDao.viewPublicBatches(orgName, orgDivision,id);
 	}
+	
+	@PostMapping(value = "rest-delete-public-batches")
+	public JsonResponse<Object> deletePublicBatches(@RequestBody Map<String, Object> payload) {
+	    logger.info("Method :deletePublicBatches starts");
+
+	    return academicCourseDao.deletePublicBatches(payload);
+	}
+
 }
