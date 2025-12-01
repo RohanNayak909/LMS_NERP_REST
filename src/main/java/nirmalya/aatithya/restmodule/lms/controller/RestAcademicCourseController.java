@@ -51,6 +51,7 @@ public class RestAcademicCourseController {
 	public ResponseEntity<JsonResponse<Object>> saveTraining(@RequestBody String payload, @RequestParam String userId,
 	@RequestParam String org, @RequestParam String orgDiv) {
 	    logger.info("Method :saveTraining starts");
+	    logger.info("Payload: {}", payload);
 	    logger.info("Method :saveTraining endss");
 	    return academicCourseDao.saveTraining(payload, userId, org, orgDiv);
 	}
