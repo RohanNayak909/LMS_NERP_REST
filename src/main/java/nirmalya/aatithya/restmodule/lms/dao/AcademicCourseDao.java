@@ -1313,7 +1313,129 @@ public class AcademicCourseDao {
 	    logger.info("Method : deletePublicBatches Dao ends");
 	    return resp;
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> addContentData(Map<String, Object> payload) {
+	    logger.info("Method : addContentData DAO starts");
 
+	    JsonResponse<Object> resp = new JsonResponse<>();
 
+	    try {
+ 
+	        String contentId       = (String) payload.get("contentId");   
+	        String contentType     = (String) payload.get("contentType");
+	        String category        = (String) payload.get("category");
+	        String title           = (String) payload.get("title");
+	        String shortDesc       = (String) payload.get("shortDescription");
+	        String fullDesc        = (String) payload.get("fullDescription");
+	        String author          = (String) payload.get("author");
+	        String status          = (String) payload.get("status");
+	        String publishDate     = (String) payload.get("publishDate");
+ 
+	        String slug            = (String) payload.get("slug");
+	        String metaDesc        = (String) payload.get("metaDescription");
+	        String metaKeywords    = (String) payload.get("metaKeywords");
+	        String canonicalUrl    = (String) payload.get("canonicalUrl");
+ 
+	        String organizationName= (String) payload.get("todOrgName");
+	        String orgDivision     = (String) payload.get("todOrgDivision");
+	        String site            = (String) payload.get("site");
+	        String orgName         = (String) payload.get("orgName");
+	        String division        = (String) payload.get("division");
+ 
+	        String loginUserId     = (String) payload.get("loginUserId");
+ 
+	        String uploadedFile    = (String) payload.get("uploadedFile");
+ 
+	        StringBuilder sb = new StringBuilder();
+
+	        sb.append("SET ");
+
+ 	        if (contentId != null && !contentId.trim().isEmpty()) {
+	            sb.append("@p_contentId='").append(contentId).append("',");
+	        }
+
+	        sb.append("@p_contentType='").append(contentType).append("',")
+	          .append("@p_category='").append(category).append("',")
+	          .append("@p_title='").append(title).append("',")
+	          .append("@p_shortDesc='").append(shortDesc).append("',")
+	          .append("@p_fullDesc='").append(fullDesc).append("',")
+	          .append("@p_author='").append(author).append("',")
+	          .append("@p_status='").append(status).append("',")
+	          .append("@p_publishDate='").append(publishDate).append("',")
+ 
+	          .append("@p_slug='").append(slug).append("',")
+	          .append("@p_metaDesc='").append(metaDesc).append("',")
+	          .append("@p_metaKeywords='").append(metaKeywords).append("',")
+	          .append("@p_canonicalUrl='").append(canonicalUrl).append("',")
+ 
+	          .append("@p_organizationName='").append(organizationName).append("',")
+	          .append("@p_orgDivision='").append(orgDivision).append("',")
+	          .append("@p_site='").append(site).append("',")
+	          .append("@p_orgName='").append(orgName).append("',")
+	          .append("@p_division='").append(division).append("',")
+ 
+	          .append("@p_userId='").append(loginUserId).append("',")
+ 
+	          .append("@p_uploadedFile='").append(uploadedFile).append("';");
+
+	        String finalValue = sb.toString();
+	        logger.info("📌 CMS SP PARAMS: {}", finalValue);
+ 
+	        String actionType;
+
+	        if (contentId == null || contentId.trim().isEmpty()) {
+	            actionType = "add-cms-content";     
+	            logger.info("🟢 Performing INSERT (add-cms-content)");
+	        } else {
+	            actionType = "modify-cms-content";    
+	            logger.info("🟡 Performing UPDATE (modify-cms-content)");
+	        } 
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", actionType)
+	                .setParameter("actionValue", finalValue)
+	                .execute();
+
+	        resp.setCode("success");
+	        resp.setMessage("CMS content processed successfully");
+
+	    } catch (Exception e) {
+	        resp.setCode("failed");
+	        resp.setMessage(e.getMessage());
+	        logger.error("❌ DAO Error:", e);
+	    }
+
+	    logger.info("Method : addContentData DAO ends");
+	    return resp;
+	}
+
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getAllBlogs(String orgName, String orgDivision) {
+		logger.info("Method : getAllBlogs Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "';";
+			logger.info(value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "view-cms-data").setParameter("actionValue", value).getResultList();
+			/*
+			 * resp.setBody(list); logger.info("viewPublicBatches" + list); } catch
+			 * (Exception e) { e.printStackTrace(); }
+			 */
+		resp.setBody(list);
+		resp.setCode("success");
+		resp.setMessage("Data fetched successfully");
+	} catch (Exception e) {
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		e.printStackTrace();
+	}
+		
+		logger.info("Method : getAllBlogs Dao ends");
+		return resp;
+
+	}
 
 }

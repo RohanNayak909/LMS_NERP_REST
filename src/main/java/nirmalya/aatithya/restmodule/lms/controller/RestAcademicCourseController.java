@@ -317,5 +317,20 @@ public class RestAcademicCourseController {
 
 	    return academicCourseDao.deletePublicBatches(payload);
 	}
+	
+	@PostMapping(value = "rest-add-content-data")
+	public JsonResponse<Object> addContentData(@RequestBody Map<String, Object> payload) {
+	    logger.info("Method :addContentData starts");
+	    logger.info("Method :addContentData Ends");
+	    return academicCourseDao.addContentData(payload);
+	}
+	
+	@RequestMapping(value = "rest-view-all-blogs", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllBlogs(@RequestParam String orgName ,@RequestParam String orgDivision) {
+		logger.info("Method :getAllBlogs start");
 
+		logger.info("Method :getAllBlogs endss");
+		return academicCourseDao.getAllBlogs(orgName,orgDivision);
+
+	}
 }
