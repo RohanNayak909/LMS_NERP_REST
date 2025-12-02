@@ -36,8 +36,6 @@ import com.google.gson.JsonObject;
  import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
-import nirmalya.aatithya.restmodule.his.dao.HISOPDDao;
-import nirmalya.aatithya.restmodule.master.model.RestAdvanceManagementModel;
 
 @Repository
 public class AcademicCourseDao {
