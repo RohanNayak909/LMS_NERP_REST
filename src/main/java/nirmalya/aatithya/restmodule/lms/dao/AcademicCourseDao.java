@@ -52,7 +52,7 @@ public class AcademicCourseDao {
 	// save
 	@SuppressWarnings("unchecked")
 	public ResponseEntity<JsonResponse<Object>> saveCourse(String courseData, String userId, String org, String orgDiv) {
-	    logger.info("method: saveCourse Starts");
+	    logger.info("method: saveCourse Starts"+courseData);
  
 	    JsonResponse<Object> resp = new JsonResponse<>();
 	    try {
