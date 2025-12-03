@@ -91,7 +91,7 @@ public class AcademicCourseDao {
 	        String value = "SET @courseData='" + safeCourseData + "', @p_userId='" + userId + "', @p_org='" + org
 	                + "', @p_orgDiv='" + orgDiv + "';";
 	        logger.info("Constructed actionValue: " + value);
- 
+            System.out.println("Value For The Course----->"+value);
 	        // Execute saveCourse or modifyCourse based on courseId
  
 			if (courseId == null || courseId.trim().isEmpty()) {
@@ -244,6 +244,57 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> deleteTraining(String orgName, String orgDivision, String trainingId) {
+
+	    logger.info("Method : deleteTraining Dao starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+
+	    try {
+	        String value = "SET @p_org='" + orgName + 
+	                       "',@p_orgDiv='" + orgDivision + 
+	                       "',@p_trainingId='" + trainingId + "';";
+	        
+	        logger.info("SP PARAM VALUE: " + value);
+
+	        Object result = em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", "delete-training")
+	                .setParameter("actionValue", value)
+	                .getSingleResult();
+
+	        logger.info("SP RESULT (ROW COUNT) : " + result);
+
+	        int rowCount = 0;
+
+	        try {
+	            rowCount = Integer.parseInt(String.valueOf(result));
+	        } catch (Exception ex) {
+	            rowCount = 0;
+	        }
+
+	        if (rowCount > 0) {
+	            resp.setCode("success");
+	            resp.setMessage("Training Deleted Successfully!");
+	        } else {
+	            resp.setCode("failed");
+	            resp.setMessage("No record deleted. Training not found.");
+	        }
+
+	        resp.setBody(trainingId);
+
+	    } catch (Exception e) {
+	        logger.error("Exception in deleteTraining DAO:", e);
+
+	        resp.setCode("failed");
+	        resp.setMessage("Something went wrong!");
+	    }
+
+	    logger.info("Method : deleteTraining Dao ends");
+	    return resp;
+	}
+
 	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> coursequiz(String orgName, String orgDivision) {

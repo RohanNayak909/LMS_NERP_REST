@@ -64,6 +64,13 @@ public class RestAcademicCourseController {
 		return academicCourseDao.viewCourse(orgName, orgDivision);
 	}
 	
+	@RequestMapping(value = "rest-delete-training", method = { RequestMethod.GET })
+	public JsonResponse<Object> deleteTraining(@RequestParam String org, @RequestParam String orgDiv,@RequestParam String trainingId) {
+		logger.info("Method :viewCourse start");
+		logger.info("Method :viewCourse endss");
+		return academicCourseDao.deleteTraining(org, orgDiv,trainingId);
+	}
+	
 	@RequestMapping(value = "rest-coursequiz", method = { RequestMethod.GET })
 	public JsonResponse<Object> coursequiz(@RequestParam String orgName, @RequestParam String orgDivision) {
 		logger.info("Method :coursequiz start");
