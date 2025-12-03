@@ -36,8 +36,6 @@ import com.google.gson.JsonObject;
  import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
-import nirmalya.aatithya.restmodule.his.dao.HISOPDDao;
-import nirmalya.aatithya.restmodule.master.model.RestAdvanceManagementModel;
 
 @Repository
 public class AcademicCourseDao {
@@ -93,7 +91,7 @@ public class AcademicCourseDao {
 	        String value = "SET @courseData='" + safeCourseData + "', @p_userId='" + userId + "', @p_org='" + org
 	                + "', @p_orgDiv='" + orgDiv + "';";
 	        logger.info("Constructed actionValue: " + value);
- 
+            System.out.println("Value For The Course----->"+value);
 	        // Execute saveCourse or modifyCourse based on courseId
  
 			if (courseId == null || courseId.trim().isEmpty()) {
@@ -246,6 +244,57 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> deleteTraining(String orgName, String orgDivision, String trainingId) {
+
+	    logger.info("Method : deleteTraining Dao starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+
+	    try {
+	        String value = "SET @p_org='" + orgName + 
+	                       "',@p_orgDiv='" + orgDivision + 
+	                       "',@p_trainingId='" + trainingId + "';";
+	        
+	        logger.info("SP PARAM VALUE: " + value);
+
+	        Object result = em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", "delete-training")
+	                .setParameter("actionValue", value)
+	                .getSingleResult();
+
+	        logger.info("SP RESULT (ROW COUNT) : " + result);
+
+	        int rowCount = 0;
+
+	        try {
+	            rowCount = Integer.parseInt(String.valueOf(result));
+	        } catch (Exception ex) {
+	            rowCount = 0;
+	        }
+
+	        if (rowCount > 0) {
+	            resp.setCode("success");
+	            resp.setMessage("Training Deleted Successfully!");
+	        } else {
+	            resp.setCode("failed");
+	            resp.setMessage("No record deleted. Training not found.");
+	        }
+
+	        resp.setBody(trainingId);
+
+	    } catch (Exception e) {
+	        logger.error("Exception in deleteTraining DAO:", e);
+
+	        resp.setCode("failed");
+	        resp.setMessage("Something went wrong!");
+	    }
+
+	    logger.info("Method : deleteTraining Dao ends");
+	    return resp;
+	}
+
 	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> coursequiz(String orgName, String orgDivision) {
@@ -1313,7 +1362,129 @@ public class AcademicCourseDao {
 	    logger.info("Method : deletePublicBatches Dao ends");
 	    return resp;
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> addContentData(Map<String, Object> payload) {
+	    logger.info("Method : addContentData DAO starts");
 
+	    JsonResponse<Object> resp = new JsonResponse<>();
 
+	    try {
+ 
+	        String contentId       = (String) payload.get("contentId");   
+	        String contentType     = (String) payload.get("contentType");
+	        String category        = (String) payload.get("category");
+	        String title           = (String) payload.get("title");
+	        String shortDesc       = (String) payload.get("shortDescription");
+	        String fullDesc        = (String) payload.get("fullDescription");
+	        String author          = (String) payload.get("author");
+	        String status          = (String) payload.get("status");
+	        String publishDate     = (String) payload.get("publishDate");
+ 
+	        String slug            = (String) payload.get("slug");
+	        String metaDesc        = (String) payload.get("metaDescription");
+	        String metaKeywords    = (String) payload.get("metaKeywords");
+	        String canonicalUrl    = (String) payload.get("canonicalUrl");
+ 
+	        String organizationName= (String) payload.get("todOrgName");
+	        String orgDivision     = (String) payload.get("todOrgDivision");
+	        String site            = (String) payload.get("site");
+	        String orgName         = (String) payload.get("orgName");
+	        String division        = (String) payload.get("division");
+ 
+	        String loginUserId     = (String) payload.get("loginUserId");
+ 
+	        String uploadedFile    = (String) payload.get("uploadedFile");
+ 
+	        StringBuilder sb = new StringBuilder();
+
+	        sb.append("SET ");
+
+ 	        if (contentId != null && !contentId.trim().isEmpty()) {
+	            sb.append("@p_contentId='").append(contentId).append("',");
+	        }
+
+	        sb.append("@p_contentType='").append(contentType).append("',")
+	          .append("@p_category='").append(category).append("',")
+	          .append("@p_title='").append(title).append("',")
+	          .append("@p_shortDesc='").append(shortDesc).append("',")
+	          .append("@p_fullDesc='").append(fullDesc).append("',")
+	          .append("@p_author='").append(author).append("',")
+	          .append("@p_status='").append(status).append("',")
+	          .append("@p_publishDate='").append(publishDate).append("',")
+ 
+	          .append("@p_slug='").append(slug).append("',")
+	          .append("@p_metaDesc='").append(metaDesc).append("',")
+	          .append("@p_metaKeywords='").append(metaKeywords).append("',")
+	          .append("@p_canonicalUrl='").append(canonicalUrl).append("',")
+ 
+	          .append("@p_organizationName='").append(organizationName).append("',")
+	          .append("@p_orgDivision='").append(orgDivision).append("',")
+	          .append("@p_site='").append(site).append("',")
+	          .append("@p_orgName='").append(orgName).append("',")
+	          .append("@p_division='").append(division).append("',")
+ 
+	          .append("@p_userId='").append(loginUserId).append("',")
+ 
+	          .append("@p_uploadedFile='").append(uploadedFile).append("';");
+
+	        String finalValue = sb.toString();
+	        logger.info("📌 CMS SP PARAMS: {}", finalValue);
+ 
+	        String actionType;
+
+	        if (contentId == null || contentId.trim().isEmpty()) {
+	            actionType = "add-cms-content";     
+	            logger.info("🟢 Performing INSERT (add-cms-content)");
+	        } else {
+	            actionType = "modify-cms-content";    
+	            logger.info("🟡 Performing UPDATE (modify-cms-content)");
+	        } 
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", actionType)
+	                .setParameter("actionValue", finalValue)
+	                .execute();
+
+	        resp.setCode("success");
+	        resp.setMessage("CMS content processed successfully");
+
+	    } catch (Exception e) {
+	        resp.setCode("failed");
+	        resp.setMessage(e.getMessage());
+	        logger.error("❌ DAO Error:", e);
+	    }
+
+	    logger.info("Method : addContentData DAO ends");
+	    return resp;
+	}
+
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getAllBlogs(String orgName, String orgDivision) {
+		logger.info("Method : getAllBlogs Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "';";
+			logger.info(value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "view-cms-data").setParameter("actionValue", value).getResultList();
+			/*
+			 * resp.setBody(list); logger.info("viewPublicBatches" + list); } catch
+			 * (Exception e) { e.printStackTrace(); }
+			 */
+		resp.setBody(list);
+		resp.setCode("success");
+		resp.setMessage("Data fetched successfully");
+	} catch (Exception e) {
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		e.printStackTrace();
+	}
+		
+		logger.info("Method : getAllBlogs Dao ends");
+		return resp;
+
+	}
 
 }

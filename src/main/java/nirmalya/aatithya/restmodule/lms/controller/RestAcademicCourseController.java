@@ -51,6 +51,7 @@ public class RestAcademicCourseController {
 	public ResponseEntity<JsonResponse<Object>> saveTraining(@RequestBody String payload, @RequestParam String userId,
 	@RequestParam String org, @RequestParam String orgDiv) {
 	    logger.info("Method :saveTraining starts");
+	    logger.info("Payload: {}", payload);
 	    logger.info("Method :saveTraining endss");
 	    return academicCourseDao.saveTraining(payload, userId, org, orgDiv);
 	}
@@ -61,6 +62,13 @@ public class RestAcademicCourseController {
 		logger.info("Method :viewCourse start");
 		logger.info("Method :viewCourse endss");
 		return academicCourseDao.viewCourse(orgName, orgDivision);
+	}
+	
+	@RequestMapping(value = "rest-delete-training", method = { RequestMethod.GET })
+	public JsonResponse<Object> deleteTraining(@RequestParam String org, @RequestParam String orgDiv,@RequestParam String trainingId) {
+		logger.info("Method :viewCourse start");
+		logger.info("Method :viewCourse endss");
+		return academicCourseDao.deleteTraining(org, orgDiv,trainingId);
 	}
 	
 	@RequestMapping(value = "rest-coursequiz", method = { RequestMethod.GET })
@@ -317,5 +325,20 @@ public class RestAcademicCourseController {
 
 	    return academicCourseDao.deletePublicBatches(payload);
 	}
+	
+	@PostMapping(value = "rest-add-content-data")
+	public JsonResponse<Object> addContentData(@RequestBody Map<String, Object> payload) {
+	    logger.info("Method :addContentData starts");
+	    logger.info("Method :addContentData Ends");
+	    return academicCourseDao.addContentData(payload);
+	}
+	
+	@RequestMapping(value = "rest-view-all-blogs", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllBlogs(@RequestParam String orgName ,@RequestParam String orgDivision) {
+		logger.info("Method :getAllBlogs start");
 
+		logger.info("Method :getAllBlogs endss");
+		return academicCourseDao.getAllBlogs(orgName,orgDivision);
+
+	}
 }
