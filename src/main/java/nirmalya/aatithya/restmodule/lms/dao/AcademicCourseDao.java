@@ -1487,4 +1487,121 @@ public class AcademicCourseDao {
 
 	}
 
+// course list in drop-down
+
+@SuppressWarnings("unchecked")
+	public List<DropDownModel> getCourseList(String org, String orgDiv) {
+		logger.info("Method : getCourseList starts");
+ 
+		List<DropDownModel> modeList = new ArrayList<DropDownModel>();
+		JsonResponse<List<DropDownModel>> resp = new JsonResponse<List<DropDownModel>>();
+		String value = "SET @p_org='" + org + "',@p_orgDiv='" + orgDiv + "';";
+		try {
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "getCourseList").setParameter("actionValue", value)
+					.getResultList();
+ 
+			for (Object[] m : x) {
+				DropDownModel dropDownModel = new DropDownModel(m[0], m[1]);
+				modeList.add(dropDownModel);
+				if (dropDownModel.equals("")) {
+					resp.setCode("success");
+					resp.setMessage("Data not found");
+				} else {
+					resp.setCode("success");
+					resp.setMessage("Data fetched successfully");
+				}
+			}
+
+			
+ 
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+ 
+		logger.info("Method : getCourseList ends");
+		return modeList;
+	}
+
+
+	@SuppressWarnings("unchecked")
+	public List<DropDownModel> getCountryList() {
+
+		logger.info("Method : getCountryList starts");
+
+		List<DropDownModel> countryList = new ArrayList<DropDownModel>();
+		JsonResponse<List<DropDownModel>> resp = new JsonResponse<List<DropDownModel>>();
+ 
+
+		try {
+			List<Object[]> x = em.createNamedStoredProcedureQuery("Employee")
+					.setParameter("actionType", "getCountryList").setParameter("actionValue", "").getResultList();
+
+			for (Object[] m : x) {
+				DropDownModel dropDownModel = new DropDownModel(m[0], m[1]);
+				countryList.add(dropDownModel);
+				
+				if (dropDownModel.equals("")) {
+					resp.setCode("success");
+					resp.setMessage("Data not found");
+				} else {
+logger.info("dropDownModel"+dropDownModel);
+					resp.setCode("success");
+					resp.setMessage("Data fetched successfully");
+				}
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getCountryList ends");
+
+		return countryList;
+	}
+
+
+
+
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> saveContactData(String orgName, String orgDivision, String userId, String data) {
+		logger.info("Method : saveContactData Dao starts" + data);
+ 
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+		
+		JSONObject jsonObj = new JSONObject(data);
+		try {
+			String name = jsonObj.optString("name");
+		    String email = jsonObj.optString("email");
+			String course = jsonObj.optString("course");
+			String organization = jsonObj.optString("organization");
+			String country = jsonObj.optString("country");
+			String phone = jsonObj.optString("phone");
+			String message = jsonObj.optString("message");
+	
+			
+ 
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_createdBy='" + userId
+					+ "', @p_name='" + name + "', @p_email='" + email
+					+ "', @p_course='" + course 
+					+ "', @p_organization='" + organization + "', @p_country='" + country 
+					+ "', @p_phone='" + phone + "', @p_message='" + message + "';";
+ 
+			logger.info("value for items for saveContactData===================>" + value);
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "saveContactData").setParameter("actionValue", value).getResultList();
+ 
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data stored Successfully");
+ 
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+		logger.info("Method : saveContactData Dao ends");
+		return resp;
+	}
+
 }

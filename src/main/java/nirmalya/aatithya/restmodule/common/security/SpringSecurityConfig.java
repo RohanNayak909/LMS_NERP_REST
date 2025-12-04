@@ -194,6 +194,11 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/his/rest-academic-course-duration-add").permitAll()
 
                 .antMatchers("/master/rest-viewEnrollCourses").permitAll()
+				.antMatchers("/his/getCourseList").permitAll()
+				.antMatchers("/his/lms-getCountryList").permitAll()
+				.antMatchers("/his/lms-contactList").permitAll()
+
+
 
     // ---- add ALL exam routes here ----
         // list quizzes mapped to product, quiz headers
