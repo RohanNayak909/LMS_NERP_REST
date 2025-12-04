@@ -1604,4 +1604,37 @@ logger.info("dropDownModel"+dropDownModel);
 		return resp;
 	}
 
+
+
+//View Contact us
+
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> viewContactUs(String orgName, String orgDivision,String id) {
+		logger.info("Method : viewContactUs Dao starts"+id);
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='" + id + "';";
+			logger.info(value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "viewContactUs").setParameter("actionValue", value).getResultList();
+			/*
+			 * resp.setBody(list); logger.info("viewPublicBatches" + list); } catch
+			 * (Exception e) { e.printStackTrace(); }
+			 */
+		resp.setBody(list);
+		resp.setCode("success");
+		resp.setMessage("Data fetched successfully");
+	} catch (Exception e) {
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		e.printStackTrace();
+	}
+		
+		logger.info("Method : viewContactUs Dao ends");
+		return resp;
+
+	}
+
 }

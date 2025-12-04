@@ -360,8 +360,6 @@ public class RestAcademicCourseController {
 	}
 
 	
-
-  
   @PostMapping(value = "lms-contactList")
 	public JsonResponse<Object> saveContactData(@RequestParam String orgName, String orgDivision, String userId,
 			@RequestBody String data) {
@@ -370,6 +368,14 @@ public class RestAcademicCourseController {
 		logger.info("Method :saveUserData endss");
 		return academicCourseDao.saveContactData(orgName, orgDivision, userId, data);
 	}
+	@RequestMapping(value = "rest-viewContactUs", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewContactUs(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :viewContactUs start");
+		logger.info("Method :viewContactUs endss");
+		return academicCourseDao.viewContactUs(orgName, orgDivision,id);
+	}
+
+
 
 
 
