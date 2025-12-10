@@ -341,4 +341,42 @@ public class RestAcademicCourseController {
 		return academicCourseDao.getAllBlogs(orgName,orgDivision);
 
 	}
+// Course List
+	@GetMapping(value = "getCourseList")
+	public List<DropDownModel> getCourseList(@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method : getCourseList starts");
+ 
+		logger.info("Method : getCourseList ends");
+		return academicCourseDao.getCourseList(org,orgDiv);
+	}
+
+@GetMapping(value = "lms-getCountryList")
+	public List<DropDownModel> getCountryList() {
+
+		logger.info("Method : getCountryList starts");
+		logger.info("Method : getCountryList ends");
+
+		return academicCourseDao.getCountryList();
+	}
+
+	
+  @PostMapping(value = "lms-contactList")
+	public JsonResponse<Object> saveContactData(@RequestParam String orgName, String orgDivision, String userId,
+			@RequestBody String data) {
+		logger.info("Method :saveUserData start");
+ 
+		logger.info("Method :saveUserData endss");
+		return academicCourseDao.saveContactData(orgName, orgDivision, userId, data);
+	}
+	@RequestMapping(value = "rest-viewContactUs", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewContactUs(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :viewContactUs start");
+		logger.info("Method :viewContactUs endss");
+		return academicCourseDao.viewContactUs(orgName, orgDivision,id);
+	}
+
+
+
+
+
 }
