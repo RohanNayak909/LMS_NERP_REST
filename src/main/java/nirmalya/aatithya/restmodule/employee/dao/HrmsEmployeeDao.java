@@ -159,6 +159,8 @@ public class HrmsEmployeeDao {
 		logger.info("Method : getCountryList starts");
 
 		List<DropDownModel> countryList = new ArrayList<DropDownModel>();
+		JsonResponse<List<DropDownModel>> resp = new JsonResponse<List<DropDownModel>>();
+ 
 
 		try {
 			List<Object[]> x = em.createNamedStoredProcedureQuery("Employee")
@@ -167,6 +169,13 @@ public class HrmsEmployeeDao {
 			for (Object[] m : x) {
 				DropDownModel dropDownModel = new DropDownModel(m[0], m[1]);
 				countryList.add(dropDownModel);
+				if (dropDownModel.equals("")) {
+					resp.setCode("success");
+					resp.setMessage("Data not found");
+				} else {
+					resp.setCode("success");
+					resp.setMessage("Data fetched successfully");
+				}
 			}
 
 		} catch (Exception e) {

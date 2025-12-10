@@ -23,6 +23,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -32,11 +33,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import nirmalya.aatithya.restmodule.common.ServerDao;
+ import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
-import nirmalya.aatithya.restmodule.his.dao.HISOPDDao;
-import nirmalya.aatithya.restmodule.master.model.RestAdvanceManagementModel;
 
 @Repository
 public class AcademicCourseDao {
@@ -51,7 +50,7 @@ public class AcademicCourseDao {
 	// save
 	@SuppressWarnings("unchecked")
 	public ResponseEntity<JsonResponse<Object>> saveCourse(String courseData, String userId, String org, String orgDiv) {
-	    logger.info("method: saveCourse Starts");
+	    logger.info("method: saveCourse Starts"+courseData);
  
 	    JsonResponse<Object> resp = new JsonResponse<>();
 	    try {
@@ -92,7 +91,7 @@ public class AcademicCourseDao {
 	        String value = "SET @courseData='" + safeCourseData + "', @p_userId='" + userId + "', @p_org='" + org
 	                + "', @p_orgDiv='" + orgDiv + "';";
 	        logger.info("Constructed actionValue: " + value);
- 
+            System.out.println("Value For The Course----->"+value);
 	        // Execute saveCourse or modifyCourse based on courseId
  
 			if (courseId == null || courseId.trim().isEmpty()) {
@@ -245,6 +244,57 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> deleteTraining(String orgName, String orgDivision, String trainingId) {
+
+	    logger.info("Method : deleteTraining Dao starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+
+	    try {
+	        String value = "SET @p_org='" + orgName + 
+	                       "',@p_orgDiv='" + orgDivision + 
+	                       "',@p_trainingId='" + trainingId + "';";
+	        
+	        logger.info("SP PARAM VALUE: " + value);
+
+	        Object result = em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", "delete-training")
+	                .setParameter("actionValue", value)
+	                .getSingleResult();
+
+	        logger.info("SP RESULT (ROW COUNT) : " + result);
+
+	        int rowCount = 0;
+
+	        try {
+	            rowCount = Integer.parseInt(String.valueOf(result));
+	        } catch (Exception ex) {
+	            rowCount = 0;
+	        }
+
+	        if (rowCount > 0) {
+	            resp.setCode("success");
+	            resp.setMessage("Training Deleted Successfully!");
+	        } else {
+	            resp.setCode("failed");
+	            resp.setMessage("No record deleted. Training not found.");
+	        }
+
+	        resp.setBody(trainingId);
+
+	    } catch (Exception e) {
+	        logger.error("Exception in deleteTraining DAO:", e);
+
+	        resp.setCode("failed");
+	        resp.setMessage("Something went wrong!");
+	    }
+
+	    logger.info("Method : deleteTraining Dao ends");
+	    return resp;
+	}
+
 	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> coursequiz(String orgName, String orgDivision) {
@@ -523,7 +573,6 @@ public class AcademicCourseDao {
 		logger.info("Method : viewStudent Dao ends : " + resp);
 		return resp;
 	}
-
 	public JsonResponse<Object> enableCourse(String id, String status) {
 		logger.info("Method : enableCourse starts");
 		JsonResponse<Object> resp = new JsonResponse<>();
@@ -1124,6 +1173,33 @@ public class AcademicCourseDao {
 
 	}
 	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getExcelData(String orgName, String orgDivision, String id) {
+		logger.info("Method : getExcelData Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='" + id + "';";
+			
+			logger.info("Value For The excel data------>"+value);
+			
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "get-excel-data").setParameter("actionValue", value).getResultList();
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getExcelData Dao ends" + resp);
+		return resp;
+
+	}
+	
 	// DAO Method (e.g., in AcademicCourseDao.java)
 	@SuppressWarnings("unchecked")
 	public ResponseEntity<JsonResponse<Object>> saveQuizMappings(String quizData, String userId, String org, String orgDiv) {
@@ -1232,4 +1308,333 @@ public class AcademicCourseDao {
 		return resp;
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> deletePublicBatches(Map<String, Object> payload) {
+	    logger.info("Method : deletePublicBatches Dao starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+
+	    try {
+	        // ➤ Extract fields from payload
+	        List<Map<String, Object>> list =
+	                (List<Map<String, Object>>) payload.get("deleteList");
+
+	        String orgName = payload.get("orgName").toString();
+	        String orgDivision = payload.get("orgDivision").toString();
+
+	        // ➤ Build comma-separated ids & names
+	        List<String> ids = new ArrayList<>();
+	        List<String> names = new ArrayList<>();
+
+	        for (Map<String, Object> item : list) {
+	            ids.add(item.get("trainingId").toString());
+	            names.add(item.get("name").toString());
+	        }
+
+	        String idString = String.join(",", ids);
+	        String nameString = String.join(",", names);
+
+	        // ➤ Stored procedure params
+	        String value =
+	                "SET @p_ids='" + idString +
+	                "',@p_org='" + orgName +
+	                "',@p_orgDiv='" + orgDivision +
+	                "',@p_name='" + nameString + "';";
+
+	        logger.info("deletePublicBatches Params : " + value);
+
+	        // ➤ Execute SP
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", "delete-public-bacthes")
+	                .setParameter("actionValue", value)
+	                .execute();
+
+	        resp.setCode("success");
+	        resp.setMessage("Public batches deleted successfully");
+
+	    } catch (Exception e) {
+	        resp.setCode("failed");
+	        resp.setMessage(e.getMessage());
+	        e.printStackTrace();
+	    }
+
+	    logger.info("Method : deletePublicBatches Dao ends");
+	    return resp;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> addContentData(Map<String, Object> payload) {
+	    logger.info("Method : addContentData DAO starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+
+	    try {
+ 
+	        String contentId       = (String) payload.get("contentId");   
+	        String contentType     = (String) payload.get("contentType");
+	        String category        = (String) payload.get("category");
+	        String title           = (String) payload.get("title");
+	        String shortDesc       = (String) payload.get("shortDescription");
+	        String fullDesc        = (String) payload.get("fullDescription");
+	        String author          = (String) payload.get("author");
+	        String status          = (String) payload.get("status");
+	        String publishDate     = (String) payload.get("publishDate");
+ 
+	        String slug            = (String) payload.get("slug");
+	        String metaDesc        = (String) payload.get("metaDescription");
+	        String metaKeywords    = (String) payload.get("metaKeywords");
+	        String canonicalUrl    = (String) payload.get("canonicalUrl");
+ 
+	        String organizationName= (String) payload.get("todOrgName");
+	        String orgDivision     = (String) payload.get("todOrgDivision");
+	        String site            = (String) payload.get("site");
+	        String orgName         = (String) payload.get("orgName");
+	        String division        = (String) payload.get("division");
+ 
+	        String loginUserId     = (String) payload.get("loginUserId");
+ 
+	        String uploadedFile    = (String) payload.get("uploadedFile");
+ 
+	        StringBuilder sb = new StringBuilder();
+
+	        sb.append("SET ");
+
+ 	        if (contentId != null && !contentId.trim().isEmpty()) {
+	            sb.append("@p_contentId='").append(contentId).append("',");
+	        }
+
+	        sb.append("@p_contentType='").append(contentType).append("',")
+	          .append("@p_category='").append(category).append("',")
+	          .append("@p_title='").append(title).append("',")
+	          .append("@p_shortDesc='").append(shortDesc).append("',")
+	          .append("@p_fullDesc='").append(fullDesc).append("',")
+	          .append("@p_author='").append(author).append("',")
+	          .append("@p_status='").append(status).append("',")
+	          .append("@p_publishDate='").append(publishDate).append("',")
+ 
+	          .append("@p_slug='").append(slug).append("',")
+	          .append("@p_metaDesc='").append(metaDesc).append("',")
+	          .append("@p_metaKeywords='").append(metaKeywords).append("',")
+	          .append("@p_canonicalUrl='").append(canonicalUrl).append("',")
+ 
+	          .append("@p_organizationName='").append(organizationName).append("',")
+	          .append("@p_orgDivision='").append(orgDivision).append("',")
+	          .append("@p_site='").append(site).append("',")
+	          .append("@p_orgName='").append(orgName).append("',")
+	          .append("@p_division='").append(division).append("',")
+ 
+	          .append("@p_userId='").append(loginUserId).append("',")
+ 
+	          .append("@p_uploadedFile='").append(uploadedFile).append("';");
+
+	        String finalValue = sb.toString();
+	        logger.info("📌 CMS SP PARAMS: {}", finalValue);
+ 
+	        String actionType;
+
+	        if (contentId == null || contentId.trim().isEmpty()) {
+	            actionType = "add-cms-content";     
+	            logger.info("🟢 Performing INSERT (add-cms-content)");
+	        } else {
+	            actionType = "modify-cms-content";    
+	            logger.info("🟡 Performing UPDATE (modify-cms-content)");
+	        } 
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", actionType)
+	                .setParameter("actionValue", finalValue)
+	                .execute();
+
+	        resp.setCode("success");
+	        resp.setMessage("CMS content processed successfully");
+
+	    } catch (Exception e) {
+	        resp.setCode("failed");
+	        resp.setMessage(e.getMessage());
+	        logger.error("❌ DAO Error:", e);
+	    }
+
+	    logger.info("Method : addContentData DAO ends");
+	    return resp;
+	}
+
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> getAllBlogs(String orgName, String orgDivision) {
+		logger.info("Method : getAllBlogs Dao starts");
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "';";
+			logger.info(value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "view-cms-data").setParameter("actionValue", value).getResultList();
+			/*
+			 * resp.setBody(list); logger.info("viewPublicBatches" + list); } catch
+			 * (Exception e) { e.printStackTrace(); }
+			 */
+		resp.setBody(list);
+		resp.setCode("success");
+		resp.setMessage("Data fetched successfully");
+	} catch (Exception e) {
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		e.printStackTrace();
+	}
+		
+		logger.info("Method : getAllBlogs Dao ends");
+		return resp;
+
+	}
+
+// course list in drop-down
+
+@SuppressWarnings("unchecked")
+	public List<DropDownModel> getCourseList(String org, String orgDiv) {
+		logger.info("Method : getCourseList starts");
+ 
+		List<DropDownModel> modeList = new ArrayList<DropDownModel>();
+		JsonResponse<List<DropDownModel>> resp = new JsonResponse<List<DropDownModel>>();
+		String value = "SET @p_org='" + org + "',@p_orgDiv='" + orgDiv + "';";
+		try {
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "getCourseList").setParameter("actionValue", value)
+					.getResultList();
+ 
+			for (Object[] m : x) {
+				DropDownModel dropDownModel = new DropDownModel(m[0], m[1]);
+				modeList.add(dropDownModel);
+				if (dropDownModel.equals("")) {
+					resp.setCode("success");
+					resp.setMessage("Data not found");
+				} else {
+					resp.setCode("success");
+					resp.setMessage("Data fetched successfully");
+				}
+			}
+
+			
+ 
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+ 
+		logger.info("Method : getCourseList ends");
+		return modeList;
+	}
+
+
+	@SuppressWarnings("unchecked")
+	public List<DropDownModel> getCountryList() {
+
+		logger.info("Method : getCountryList starts");
+
+		List<DropDownModel> countryList = new ArrayList<DropDownModel>();
+		JsonResponse<List<DropDownModel>> resp = new JsonResponse<List<DropDownModel>>();
+ 
+
+		try {
+			List<Object[]> x = em.createNamedStoredProcedureQuery("Employee")
+					.setParameter("actionType", "getCountryList").setParameter("actionValue", "").getResultList();
+
+			for (Object[] m : x) {
+				DropDownModel dropDownModel = new DropDownModel(m[0], m[1]);
+				countryList.add(dropDownModel);
+				
+				if (dropDownModel.equals("")) {
+					resp.setCode("success");
+					resp.setMessage("Data not found");
+				} else {
+logger.info("dropDownModel"+dropDownModel);
+					resp.setCode("success");
+					resp.setMessage("Data fetched successfully");
+				}
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getCountryList ends");
+
+		return countryList;
+	}
+
+
+
+
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> saveContactData(String orgName, String orgDivision, String userId, String data) {
+		logger.info("Method : saveContactData Dao starts" + data);
+ 
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+		
+		JSONObject jsonObj = new JSONObject(data);
+		try {
+			String name = jsonObj.optString("name");
+		    String email = jsonObj.optString("email");
+			String course = jsonObj.optString("course");
+			String organization = jsonObj.optString("organization");
+			String country = jsonObj.optString("country");
+			String phone = jsonObj.optString("phone");
+			String message = jsonObj.optString("message");
+	
+			
+ 
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_createdBy='" + userId
+					+ "', @p_name='" + name + "', @p_email='" + email
+					+ "', @p_course='" + course 
+					+ "', @p_organization='" + organization + "', @p_country='" + country 
+					+ "', @p_phone='" + phone + "', @p_message='" + message + "';";
+ 
+			logger.info("value for items for saveContactData===================>" + value);
+			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "saveContactData").setParameter("actionValue", value).getResultList();
+ 
+			resp.setBody(x.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data stored Successfully");
+ 
+		} catch (Exception e) {
+			resp.setCode("failed");
+			resp.setMessage(e.getMessage());
+			e.printStackTrace();
+		}
+		logger.info("Method : saveContactData Dao ends");
+		return resp;
+	}
+
+
+
+//View Contact us
+
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> viewContactUs(String orgName, String orgDivision,String id) {
+		logger.info("Method : viewContactUs Dao starts"+id);
+
+		JsonResponse<Object> resp = new JsonResponse<Object>();
+
+		try {
+			String value = "SET @p_org='" + orgName + "',@p_orgDiv='" + orgDivision + "',@p_id='" + id + "';";
+			logger.info(value);
+			List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+					.setParameter("actionType", "viewContactUs").setParameter("actionValue", value).getResultList();
+			/*
+			 * resp.setBody(list); logger.info("viewPublicBatches" + list); } catch
+			 * (Exception e) { e.printStackTrace(); }
+			 */
+		resp.setBody(list);
+		resp.setCode("success");
+		resp.setMessage("Data fetched successfully");
+	} catch (Exception e) {
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		e.printStackTrace();
+	}
+		
+		logger.info("Method : viewContactUs Dao ends");
+		return resp;
+
+	}
+
 }

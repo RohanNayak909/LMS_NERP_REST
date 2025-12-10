@@ -87,22 +87,33 @@ public class RestExamDao {
   /* ======================= RUNTIME ======================= */
 
   public JsonResponse<Object> eligibility(String userId, String productId, Integer trainingId, String mode) {
-    JsonResponse<Object> resp = new JsonResponse<>();
-    try {
-      String value =
-          "SET @p_user_id='" + esc(userId) + "'," +
-          "@p_product_id='" + esc(productId) + "'," +
-          "@p_training_id=" + (trainingId == null ? "NULL" : trainingId) + "," +
-          "@p_mode='" + esc(mode == null ? "MOCK" : mode) + "';";
-      List<?> rows = callProc("eligibility", value);
-      ok(resp, rows);
-    } catch (Exception e) {
-      SQLException sx = unwrapSqlException(e);
-      resp.setCode("failed");
-      resp.setMessage(sx != null && "45000".equals(sx.getSQLState()) ? sx.getMessage() : e.getMessage());
-    }
-    return resp;
+      JsonResponse<Object> resp = new JsonResponse<>();
+      try {
+        String value =
+            "SET @p_user_id='" + esc(userId) + "'," +
+            "@p_product_id='" + esc(productId) + "'," +
+            "@p_training_id=" + (trainingId == null ? "NULL" : trainingId) + "," +
+            "@p_mode='" + esc(mode == null ? "MOCK" : mode) + "'," +
+            // 🔴 IMPORTANT: always reset quiz filter for this call
+            "@p_quiz_code=NULL;";
+        logger.info("Value Of The Procedure"+value);
+ 
+        List<?> rows = callProc("eligibility", value);
+        rows.forEach(row -> logger.info("List Of Mock Tests--->" + row));
+ 
+        ok(resp, rows);
+      } catch (Exception e) {
+        SQLException sx = unwrapSqlException(e);
+        resp.setCode("failed");
+        resp.setMessage(
+            sx != null && "45000".equals(sx.getSQLState())
+                ? sx.getMessage()
+                : e.getMessage()
+        );
+      }
+      return resp;
   }
+ 
 
   /** Direct SQL — there is no SP action for hasOpenAttempt. */
   public JsonResponse<Object> hasOpenAttempt(String userId, String productId, Integer trainingId, String mode) {
@@ -180,7 +191,7 @@ public class RestExamDao {
         .append("@p_quiz_code=").append(quizCode == null ? "NULL" : "'" + esc(quizCode) + "'")
         .append(";")
         .toString();
-
+      logger.info("Value For The ProductStart Actiion Type----->"+value);
       List<Object[]> rows = callProc("productStart", value);
       Object first = firstRow(rows);
 

@@ -51,6 +51,7 @@ public class RestAcademicCourseController {
 	public ResponseEntity<JsonResponse<Object>> saveTraining(@RequestBody String payload, @RequestParam String userId,
 	@RequestParam String org, @RequestParam String orgDiv) {
 	    logger.info("Method :saveTraining starts");
+	    logger.info("Payload: {}", payload);
 	    logger.info("Method :saveTraining endss");
 	    return academicCourseDao.saveTraining(payload, userId, org, orgDiv);
 	}
@@ -61,6 +62,13 @@ public class RestAcademicCourseController {
 		logger.info("Method :viewCourse start");
 		logger.info("Method :viewCourse endss");
 		return academicCourseDao.viewCourse(orgName, orgDivision);
+	}
+	
+	@RequestMapping(value = "rest-delete-training", method = { RequestMethod.GET })
+	public JsonResponse<Object> deleteTraining(@RequestParam String org, @RequestParam String orgDiv,@RequestParam String trainingId) {
+		logger.info("Method :viewCourse start");
+		logger.info("Method :viewCourse endss");
+		return academicCourseDao.deleteTraining(org, orgDiv,trainingId);
 	}
 	
 	@RequestMapping(value = "rest-coursequiz", method = { RequestMethod.GET })
@@ -148,7 +156,6 @@ public class RestAcademicCourseController {
 		logger.info("Method : viewStudent Controller end");
 		return response;
 	}
-
 	// enable
 	@GetMapping("rest-subscription-student-course-enable")
 	public JsonResponse<Object> enableCourse(@RequestParam String id, @RequestParam String status) {
@@ -287,6 +294,14 @@ public class RestAcademicCourseController {
 		return academicCourseDao.getRecentPurchaseCourses(orgName,orgDivision,userId);
 
 	}
+	@RequestMapping(value = "rest-get-excel-data", method = { RequestMethod.GET })
+	public JsonResponse<Object> getExcelData(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :getExcelData start");
+
+		logger.info("Method :getExcelData endss");
+		return academicCourseDao.getExcelData(orgName,orgDivision,id);
+
+	}
 	@PostMapping(value = "rest-academic-course-quiz-save")
     public ResponseEntity<JsonResponse<Object>> saveQuizMappings(@RequestBody String quizData, @RequestParam String userId,
             @RequestParam String org, @RequestParam String orgDiv) {
@@ -303,4 +318,65 @@ public class RestAcademicCourseController {
 		logger.info("Method :viewPublicBatches endss");
 		return academicCourseDao.viewPublicBatches(orgName, orgDivision,id);
 	}
+	
+	@PostMapping(value = "rest-delete-public-batches")
+	public JsonResponse<Object> deletePublicBatches(@RequestBody Map<String, Object> payload) {
+	    logger.info("Method :deletePublicBatches starts");
+
+	    return academicCourseDao.deletePublicBatches(payload);
+	}
+	
+	@PostMapping(value = "rest-add-content-data")
+	public JsonResponse<Object> addContentData(@RequestBody Map<String, Object> payload) {
+	    logger.info("Method :addContentData starts");
+	    logger.info("Method :addContentData Ends");
+	    return academicCourseDao.addContentData(payload);
+	}
+	
+	@RequestMapping(value = "rest-view-all-blogs", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllBlogs(@RequestParam String orgName ,@RequestParam String orgDivision) {
+		logger.info("Method :getAllBlogs start");
+
+		logger.info("Method :getAllBlogs endss");
+		return academicCourseDao.getAllBlogs(orgName,orgDivision);
+
+	}
+// Course List
+	@GetMapping(value = "getCourseList")
+	public List<DropDownModel> getCourseList(@RequestParam String org, @RequestParam String orgDiv) {
+		logger.info("Method : getCourseList starts");
+ 
+		logger.info("Method : getCourseList ends");
+		return academicCourseDao.getCourseList(org,orgDiv);
+	}
+
+@GetMapping(value = "lms-getCountryList")
+	public List<DropDownModel> getCountryList() {
+
+		logger.info("Method : getCountryList starts");
+		logger.info("Method : getCountryList ends");
+
+		return academicCourseDao.getCountryList();
+	}
+
+	
+  @PostMapping(value = "lms-contactList")
+	public JsonResponse<Object> saveContactData(@RequestParam String orgName, String orgDivision, String userId,
+			@RequestBody String data) {
+		logger.info("Method :saveUserData start");
+ 
+		logger.info("Method :saveUserData endss");
+		return academicCourseDao.saveContactData(orgName, orgDivision, userId, data);
+	}
+	@RequestMapping(value = "rest-viewContactUs", method = { RequestMethod.GET })
+	public JsonResponse<Object> viewContactUs(@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String id) {
+		logger.info("Method :viewContactUs start");
+		logger.info("Method :viewContactUs endss");
+		return academicCourseDao.viewContactUs(orgName, orgDivision,id);
+	}
+
+
+
+
+
 }
