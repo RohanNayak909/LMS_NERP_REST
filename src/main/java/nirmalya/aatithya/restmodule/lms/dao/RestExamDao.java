@@ -1,13 +1,17 @@
 package nirmalya.aatithya.restmodule.lms.dao;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -639,15 +643,12 @@ public class RestExamDao {
   @Transactional
   @SuppressWarnings("unchecked")
   public ResponseEntity<JsonResponse<Object>> saveQuiz(Map<String, Object> quizData) {
+
       logger.info("Method : saveQuiz Starts");
       System.out.println("Value Of the Quiz Data------------->" + quizData);
-
-      JsonResponse<Object> resp = new JsonResponse<>();
+       JsonResponse<Object> resp = new JsonResponse<>();
 
       try {
-          String userId = (String) quizData.get("userId");
-          String org = (String) quizData.get("org");
-          String orgDiv = (String) quizData.get("orgDiv");
           List<Map<String, Object>> quizList = (List<Map<String, Object>>) quizData.get("quizzes");
 
           if (quizList == null || quizList.isEmpty()) {
@@ -656,77 +657,99 @@ public class RestExamDao {
               return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
           }
 
-          logger.info("🧩 Received {} quiz question(s) (userId={}, org={}, orgDiv={})",
-                  quizList.size(), userId, org, orgDiv);
+          logger.info("🧩 Received {} quiz question(s)", quizList.size());
 
           int counter = 1;
           List<Object> savedResults = new ArrayList<>();
-          Set<String> processedSections = new HashSet<>();
+          Set<String> processedGroups = new HashSet<>();
+
+          // 🔹 One stable quiz code for full upload batch
+          String stableQuizCode = null;
 
           for (Map<String, Object> quizNode : quizList) {
 
-              String quizCode = (String) quizNode.getOrDefault("quiz_code", "");
-              String sectionTitle = (String) quizNode.getOrDefault("section_title", "");
+              // Extract raw values
+              String rawQuizCode = safeStr(quizNode.get("quiz_code"));
+              String rawSection = safeStr(quizNode.get("section_title"));
+              String questionText = safeStr(quizNode.get("question_text"));
+              logger.info("🔥 Raw stable quizCode = {}", rawQuizCode ,"Raw Section Data",rawSection);
 
-              // ✅ Delete old data only once per quiz_code + section_title
-              if (!quizCode.isEmpty() && !sectionTitle.isEmpty()) {
-                  String key = quizCode + "|" + sectionTitle;
-                  if (!processedSections.contains(key)) {
-                      String deleteValue = String.format(
-                              "SET @quiz_code='%s', @section_title='%s';",
-                              quizCode.replace("'", "\\'"),
-                              sectionTitle.replace("'", "\\'")
-                      );
-                      System.out.println("Delete Value Of The Quiz---->"+deleteValue);
-                      em.createNativeQuery("CALL lms_quiz_routines(:actionType, :actionValue)")
-                              .setParameter("actionType", "deleteOldQuizData")
-                              .setParameter("actionValue", deleteValue)
-                              .executeUpdate();
-                      logger.info("🧹 Deleted old data for quiz='{}' section='{}'", quizCode, sectionTitle);
-                      processedSections.add(key);
-                  }
+              // 🔹 Step 1 — Derive stable internal quiz code once
+              if (stableQuizCode == null) {
+
+                  String baseValue = rawQuizCode.isEmpty() ? rawSection : rawQuizCode;
+                  stableQuizCode = deriveStableQuizCode(baseValue);
+
+                  logger.info("🔥 Derived stable quizCode = {}", stableQuizCode);
               }
 
-              // ✅ Extract options and rationales
+              // 🔹 Step 2 — Normalize section title
+              String sectionTitle = normalizeKey(rawSection);
+              if (sectionTitle.isEmpty()) {
+                  sectionTitle = "SECTION_" + stableQuizCode;
+              }
+
+              // 🔹 Unique combination key for delete once
+              String groupKey = stableQuizCode + "|" + sectionTitle;
+
+              // 🔹 Step 3 — Delete existing records only once
+              if (!processedGroups.contains(groupKey)) {
+
+                  String deleteValue = String.format(
+                          "SET @quiz_code='%s', @section_title='%s';",
+                          stableQuizCode, sectionTitle
+                  );
+
+                  System.out.println("Delete Value Of The Quiz---->" + deleteValue);
+
+                  em.createNativeQuery("CALL lms_quiz_routines(:actionType, :actionValue)")
+                          .setParameter("actionType", "deleteOldQuizData")
+                          .setParameter("actionValue", deleteValue)
+                          .executeUpdate();
+
+                  logger.info("🧹 Deleted old data for quiz='{}' section='{}'", stableQuizCode, sectionTitle);
+                  processedGroups.add(groupKey);
+              }
+
+              // 🔹 Step 4 — Extract options
               List<Map<String, Object>> options = (List<Map<String, Object>>) quizNode.get("options");
               Map<String, String> optMap = new HashMap<>();
               Map<String, String> ratMap = new HashMap<>();
 
               if (options != null) {
                   for (Map<String, Object> opt : options) {
-                      String label = opt.get("option").toString(); // A/B/C/D
-                      String text = opt.get("text") != null ? opt.get("text").toString() : "";
-                      String rationale = opt.get("rationale") != null ? opt.get("rationale").toString() : "";
-                      optMap.put(label, text);
-                      ratMap.put(label, rationale);
+                      String label = safeStr(opt.get("option")); // A/B/C/D
+                      optMap.put(label, safeStr(opt.get("text")));
+                      ratMap.put(label, safeStr(opt.get("rationale")));
                   }
               }
 
-              // ✅ Prepare SQL variable assignment string
+              // 🔹 Step 5 — Prepare stored procedure values
               String actionValue = String.format(
                       "SET @quiz_code='%s', @section_title='%s', @question_text='%s', " +
                       "@option_a='%s', @option_b='%s', @option_c='%s', @option_d='%s', " +
                       "@rationale_a='%s', @rationale_b='%s', @rationale_c='%s', @rationale_d='%s', " +
                       "@right_answer='%s', @syllabus_ref='%s';",
-                      safeStr(quizNode.get("quiz_code")),
-                      safeStr(quizNode.get("section_title")),
-                      safeStr(quizNode.get("question_text")),
-                      safeStr(optMap.get("A")),
-                      safeStr(optMap.get("B")),
-                      safeStr(optMap.get("C")),
-                      safeStr(optMap.get("D")),
-                      safeStr(ratMap.get("A")),
-                      safeStr(ratMap.get("B")),
-                      safeStr(ratMap.get("C")),
-                      safeStr(ratMap.get("D")),
+
+                      stableQuizCode,
+                      sectionTitle,
+                      questionText,
+                      optMap.getOrDefault("A", ""),
+                      optMap.getOrDefault("B", ""),
+                      optMap.getOrDefault("C", ""),
+                      optMap.getOrDefault("D", ""),
+
+                      ratMap.getOrDefault("A", ""),
+                      ratMap.getOrDefault("B", ""),
+                      ratMap.getOrDefault("C", ""),
+                      ratMap.getOrDefault("D", ""),
+
                       safeStr(quizNode.get("right_answer")),
                       safeStr(quizNode.get("syllabus_ref"))
               );
 
-              logger.info("🧠 [Record {}] Executing saveQuiz for quiz='{}' section='{}'", counter, quizCode, sectionTitle);
               System.out.println("Value for SQL ---> " + actionValue);
 
-              // ✅ Call stored procedure
               Object result = em.createNativeQuery("CALL lms_quiz_routines(:actionType, :actionValue)")
                       .setParameter("actionType", "saveQuiz")
                       .setParameter("actionValue", actionValue)
@@ -752,9 +775,25 @@ public class RestExamDao {
       return new ResponseEntity<>(resp, HttpStatus.CREATED);
   }
 
-  private String safeStr(Object val) {
-      return val == null ? "" : val.toString().replace("'", "\\'");
+  
+  private String deriveStableQuizCode(String text) {
+	    if (text == null || text.trim().isEmpty()) return "UNKNOWNQUIZ";
+	    return text.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
+	}
+
+  private String normalizeKey(String value) {
+	    if (value == null) return "";
+	    return value
+	            .trim()
+	            .replaceAll("[^a-zA-Z0-9 ]", "")
+	            .replaceAll("\\s+", " ")
+	            .toUpperCase();
+	}
+ 
+  private String safeStr(Object obj) {
+      return obj == null ? "" : obj.toString().trim().replace("'", "\\'");
   }
+ 
 
   /** SP returns one JSON aggregate row. org args are ignored by SP; kept in signature for compatibility. */
   public JsonResponse<Object> viewQuizConfig(String orgName, String orgDivision) {
