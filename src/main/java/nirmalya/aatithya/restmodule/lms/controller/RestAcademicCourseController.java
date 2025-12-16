@@ -326,6 +326,13 @@ public class RestAcademicCourseController {
 	    return academicCourseDao.deletePublicBatches(payload);
 	}
 	
+	@PostMapping(value = "rest-coursedelete")
+	public JsonResponse<Object> coursedelete(@RequestBody Map<String, Object> payload) {
+	    logger.info("Method :coursedelete starts");
+
+	    return academicCourseDao.coursedelete(payload);
+	}
+	
 	@PostMapping(value = "rest-add-content-data")
 	public JsonResponse<Object> addContentData(@RequestBody Map<String, Object> payload) {
 	    logger.info("Method :addContentData starts");
