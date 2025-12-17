@@ -24,7 +24,7 @@ import nirmalya.aatithya.restmodule.master.model.ProductCategoryModel;
 @RequestMapping(value = "master/")
 public class ProductCategoryRestController {
 
-	Logger logger = LoggerFactory.getLogger(LocationMasterRestController.class);
+	Logger logger = LoggerFactory.getLogger(ProductCategoryRestController.class);
 
 	@Autowired
 	ProductCategoryDao productCategoryDao;

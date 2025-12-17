@@ -2,7 +2,7 @@
 package nirmalya.aatithya.restmodule.common.utils;
 import java.util.Random;
 
-import nirmalya.aatithya.restmodule.property.model.PropertyModel;
+import nirmalya.aatithya.restmodule.employee.model.PropertyModel;
 
 /**
  * @author NirmalyaLabs

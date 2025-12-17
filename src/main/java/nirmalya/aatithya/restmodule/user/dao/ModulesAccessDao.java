@@ -14,9 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
-import nirmalya.aatithya.restmodule.common.utils.GenerateLocationMasterParameter;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
-import nirmalya.aatithya.restmodule.master.model.LocationSectionModel;
 import nirmalya.aatithya.restmodule.user.model.ModulesAccessModel;
 
 @Repository
