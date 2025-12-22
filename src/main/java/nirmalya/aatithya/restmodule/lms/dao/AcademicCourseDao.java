@@ -1518,6 +1518,58 @@ public class AcademicCourseDao {
 	    return resp;
 	}
 	
+	
+	@SuppressWarnings("unchecked")
+	public JsonResponse<Object> coursedelete(Map<String, Object> payload) {
+	    logger.info("Method : coursedelete Dao starts");
+
+	    JsonResponse<Object> resp = new JsonResponse<>();
+
+	    try {
+	        // ➤ Extract fields from payload
+	        List<Map<String, Object>> list =
+	                (List<Map<String, Object>>) payload.get("deleteList");
+
+	        String orgName = payload.get("orgName").toString();
+	        String orgDivision = payload.get("orgDivision").toString();
+
+	        // ➤ Build comma-separated ids & names
+	        List<String> ids = new ArrayList<>();
+
+	        for (Map<String, Object> item : list) {
+	            ids.add(item.get("courseId").toString());
+	        }
+
+	        String idString = String.join(",", ids);
+
+	        // ➤ Stored procedure params
+	        String value =
+	                "SET @p_ids='" + idString +
+	                "',@p_org='" + orgName +
+	                "',@p_orgDiv='" + orgDivision + "';";
+
+	        logger.info("deletePublicBatches Params : " + value);
+
+	        // ➤ Execute SP
+	        em.createNamedStoredProcedureQuery("academic_course_routines")
+	                .setParameter("actionType", "deletecourse")
+	                .setParameter("actionValue", value)
+	                .execute();
+
+	        resp.setCode("success");
+	        resp.setMessage("Course deleted successfully");
+
+	    } catch (Exception e) {
+	        resp.setCode("failed");
+	        resp.setMessage(e.getMessage());
+	        e.printStackTrace();
+	    }
+
+	    logger.info("Method : coursedelete Dao ends");
+	    return resp;
+	}
+	
+	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> addContentData(Map<String, Object> payload) {
 	    logger.info("Method : addContentData DAO starts");
