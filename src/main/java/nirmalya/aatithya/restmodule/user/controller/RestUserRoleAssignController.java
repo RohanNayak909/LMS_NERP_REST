@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
-import nirmalya.aatithya.restmodule.master.model.RestOrganisationTypeModel;
 import nirmalya.aatithya.restmodule.user.dao.RolesAccessDao;
 import nirmalya.aatithya.restmodule.user.dao.UserRoleAssignDao;
 import nirmalya.aatithya.restmodule.user.model.RestUserRoleAssignModel;

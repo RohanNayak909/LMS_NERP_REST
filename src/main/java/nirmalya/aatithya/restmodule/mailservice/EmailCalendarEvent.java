@@ -24,11 +24,10 @@ import javax.mail.util.ByteArrayDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import nirmalya.aatithya.restmodule.pipeline.dao.RestCrmDealDao;
 
 public class EmailCalendarEvent {
 
-	Logger logger = LoggerFactory.getLogger(RestCrmDealDao.class);
+	Logger logger = LoggerFactory.getLogger(EmailCalendarEvent.class);
 	
 	public void send(String subject, String mailFrom, String password, List<String> toAddress,
 			String host, String port, String location, String summary, String description, String startDateTime, 

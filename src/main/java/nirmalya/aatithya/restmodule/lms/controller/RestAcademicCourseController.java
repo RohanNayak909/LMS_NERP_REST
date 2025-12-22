@@ -21,19 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
-import nirmalya.aatithya.restmodule.his.controller.HISOPDRestController;
-import nirmalya.aatithya.restmodule.his.dao.HISOPDDao;
-import nirmalya.aatithya.restmodule.his.model.HISBedMasterRestModel;
-import nirmalya.aatithya.restmodule.his.model.HISPatientRestModel;
 import nirmalya.aatithya.restmodule.lms.dao.AcademicCourseDao;
-import nirmalya.aatithya.restmodule.master.model.RestAdvanceManagementModel;
 
 @RestController
 @RequestMapping(value = "his/")
 @CrossOrigin(origins = "*")
 public class RestAcademicCourseController {
 
-	Logger logger = LoggerFactory.getLogger(HISOPDRestController.class);
+	Logger logger = LoggerFactory.getLogger(RestAcademicCourseController.class);
 
 	@Autowired
 	AcademicCourseDao academicCourseDao;
