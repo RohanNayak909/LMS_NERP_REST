@@ -1,5 +1,6 @@
 package nirmalya.aatithya.restmodule.lms.dao;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -9,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
@@ -930,234 +932,6 @@ public class AcademicCourseDao {
 	 * 
 	 * logger.info("method: saveCourseDuration Ends" + response); return response; }
 	 */
-	
-	private String esc(String s) {
-        if (s == null) return "";
-        return s.replace("'", "''").trim();
-    }
-
-    private String trunc(String s, int max) {
-        if (s == null) return "";
-        s = s.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String asStr(Object o) {
-        return o == null ? null : String.valueOf(o);
-    }
-
-    private static Double asDouble(Object o) {
-        if (o == null) return null;
-        if (o instanceof Number) return ((Number) o).doubleValue();
-        try {
-            return Double.parseDouble(String.valueOf(o));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static Long asLong(Object o) {
-        if (o == null) return null;
-        if (o instanceof Number) return ((Number) o).longValue();
-        try {
-            return Long.parseLong(String.valueOf(o));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    // ---------- main ----------
-    @SuppressWarnings("unchecked")
-    public ResponseEntity<JsonResponse<Object>> saveCourseDuration(String data, String userId, String org, String orgDiv) {
-        logger.info("method: saveCourseDuration Starts");
-
-        JsonResponse<Object> resp = new JsonResponse<>();
-
-        try {
-            JSONObject jsonObj = new JSONObject(data);
-
-            // required
-            String courseId = jsonObj.optString("courseId");
-            String fileName = jsonObj.optString("fileName");   // your SP expects @p_fileName
-            String fileType = jsonObj.optString("fileType");
-            String duration = jsonObj.optString("duration");   // "12%" etc
-
-            // optional advanced tracking (your SP uses these)
-            String sessionUid   = jsonObj.optString("sessionUid");
-            String deltaSeconds = jsonObj.optString("deltaSeconds");
-            String location     = jsonObj.optString("location");
-            String status       = jsonObj.optString("status");
-            String scoreRaw     = jsonObj.optString("scoreRaw");
-            String scoreScaled  = jsonObj.optString("scoreScaled");
-            String eventType    = jsonObj.optString("eventType");
-            String scormKey     = jsonObj.optString("scormKey");
-            String scormValue   = jsonObj.optString("scormValue");
-            String suspendData  = jsonObj.optString("suspendData");
-
-            // meta:{source,reason,key,value} (optional)
-            JSONObject meta = jsonObj.optJSONObject("meta");
-            String metaSource = meta != null ? meta.optString("source") : "";
-            String metaReason = meta != null ? meta.optString("reason") : "";
-            String metaKey    = meta != null ? meta.optString("key") : "";
-            String metaValue  = meta != null ? meta.optString("value") : "";
-
-            // safety caps (avoid huge SET strings)
-            scormValue  = trunc(scormValue, 8000);
-            suspendData = trunc(suspendData, 60000);
-            metaValue   = trunc(metaValue, 2000);
-
-            if (courseId == null || courseId.trim().isEmpty()) {
-                resp.setCode("Failed");
-                resp.setMessage("Missing courseId");
-                return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-            }
-            if (fileName == null || fileName.trim().isEmpty()) {
-                resp.setCode("Failed");
-                resp.setMessage("Missing fileName");
-                return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-            }
-            if (fileType == null || fileType.trim().isEmpty()) {
-                resp.setCode("Failed");
-                resp.setMessage("Missing fileType");
-                return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-            }
-            if (duration == null || duration.trim().isEmpty()) {
-                resp.setCode("Failed");
-                resp.setMessage("Missing duration");
-                return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-            }
-
-            // ✅ IMPORTANT: if sessionUid is empty, make a safe deterministic one
-            // (prevents collisions across users/courses/files)
-            if (sessionUid == null || sessionUid.trim().isEmpty()) {
-                String safeFile = fileName.replaceAll("[^a-zA-Z0-9]+", "_");
-                sessionUid = "LEGACY_" + userId + "_" + courseId + "_" + safeFile;
-                sessionUid = trunc(sessionUid, 120);
-            }
-
-            // ✅ Ensure deltaSeconds is numeric-like; else keep empty -> treat as 0 in SP
-            if (deltaSeconds != null) deltaSeconds = deltaSeconds.trim();
-
-            // Build actionValue: set all SP vars you used
-            String actionValue =
-                    "SET " +
-                    " @data='" + esc(trunc(data, 20000)) + "'," +
-                    " @p_userId='" + esc(userId) + "'," +
-                    " @p_org='" + esc(org) + "'," +
-                    " @p_orgDiv='" + esc(orgDiv) + "'," +
-                    " @p_courseId='" + esc(courseId) + "'," +
-                    " @p_fileName='" + esc(fileName) + "'," +
-                    " @p_fileType='" + esc(fileType) + "'," +
-                    " @p_duration='" + esc(duration) + "'," +
-
-                    " @p_sessionUid='" + esc(sessionUid) + "'," +
-                    " @p_deltaSeconds=" + (deltaSeconds == null || deltaSeconds.isEmpty()
-                                            ? "NULL"
-                                            : "'" + esc(deltaSeconds) + "'") + "," +
-                    " @p_location='" + esc(location) + "'," +
-                    " @p_status='" + esc(status) + "'," +
-                    " @p_scoreRaw='" + esc(scoreRaw) + "'," +
-                    " @p_scoreScaled='" + esc(scoreScaled) + "'," +
-                    " @p_eventType='" + esc(eventType) + "'," +
-                    " @p_scormKey='" + esc(scormKey) + "'," +
-                    " @p_scormValue='" + esc(scormValue) + "'," +
-                    " @p_suspendData='" + esc(suspendData) + "'," +
-
-                    " @p_metaSource='" + esc(metaSource) + "'," +
-                    " @p_metaReason='" + esc(metaReason) + "'," +
-                    " @p_metaKey='" + esc(metaKey) + "'," +
-                    " @p_metaValue='" + esc(metaValue) + "';";
-
-            logger.info("saveCourseDuration actionValue built");
-
-            // 1) Save progress (summary + session + events + per-location time)
-            em.createNamedStoredProcedureQuery("academic_course_routines")
-                    .setParameter("actionType", "saveCourseDuration")
-                    .setParameter("actionValue", actionValue)
-                    .execute();
-
-            // 2) Fetch for this user+course (your SP requires both params now)
-            List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
-                    .setParameter("actionType", "getCourseDurations")
-                    .setParameter("actionValue",
-                            "SET @p_userId='" + esc(userId) + "', @p_courseId='" + esc(courseId) + "';")
-                    .getResultList();
-
-            resp.setBody(mapCourseDurations(rows));
-            resp.setCode("Success");
-            resp.setMessage("Progress updated successfully");
-
-            return new ResponseEntity<>(resp, HttpStatus.OK);
-
-        } catch (Exception e) {
-            logger.error("Error in saveCourseDuration: ", e);
-            try {
-                String[] err = serverDao.errorProcedureCall(e);
-                resp.setCode("Failed");
-                resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
-            } catch (Exception nestedException) {
-                logger.error("Error while handling exception: ", nestedException);
-                resp.setCode("Failed");
-                resp.setMessage("Oops! Something went wrong during error handling");
-            }
-            return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public ResponseEntity<JsonResponse<Object>> getCourseDurations(String userId, String courseId) {
-        logger.info("method: getCourseDurations Starts");
-
-        JsonResponse<Object> resp = new JsonResponse<>();
-        try {
-            List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
-                    .setParameter("actionType", "getCourseDurations")
-                    .setParameter("actionValue",
-                            "SET @p_userId='" + esc(userId) + "', @p_courseId='" + esc(courseId) + "';")
-                    .getResultList();
-
-            resp.setBody(mapCourseDurations(rows));
-            resp.setCode("Success");
-            resp.setMessage("Fetched durations");
-            return new ResponseEntity<>(resp, HttpStatus.OK);
-
-        } catch (Exception e) {
-            logger.error("Error in getCourseDurations: ", e);
-            resp.setCode("Failed");
-            resp.setMessage("Failed to fetch durations");
-            return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    // ✅ Mapping must match your SP SELECT order (0..11)
-    private List<Map<String, Object>> mapCourseDurations(List<Object[]> rows) {
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (Object[] r : rows) {
-            Map<String, Object> m = new LinkedHashMap<>();
-
-            m.put("durationId",   asLong(r[0]));
-            m.put("userId",       asStr(r[1]));
-            m.put("courseId",     asStr(r[2]));
-            m.put("fileName",     asStr(r[3]));
-            m.put("fileType",     asStr(r[4]));
-            m.put("duration",     asDouble(r[5]));
-
-            m.put("totalSeconds", asLong(r[6]));
-            m.put("lastLocation", asStr(r[7]));
-            m.put("status",       asStr(r[8]));
-            m.put("scoreRaw",     asStr(r[9]));
-            m.put("scoreScaled",  asStr(r[10]));
-            m.put("updatedOn",    r[11]); // timestamp/date object
-
-            out.add(m);
-        }
-        return out;
-    }
-
-
-
-
-
 
 	
 	@SuppressWarnings("unchecked")
@@ -1843,5 +1617,309 @@ logger.info("dropDownModel"+dropDownModel);
 		return resp;
 
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+    private static final Pattern NUMERIC = Pattern.compile("^[0-9]+(\\.[0-9]+)?$");
+
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<JsonResponse<Object>> saveCourseDuration(String data, String userId, String org, String orgDiv) {
+        logger.info("method: saveCourseDuration Starts");
+
+        JsonResponse<Object> resp = new JsonResponse<>();
+
+        try {
+            if (isBlank(userId)) return bad(resp, "Missing userId");
+            if (isBlank(org))    return bad(resp, "Missing org");
+            if (isBlank(orgDiv)) return bad(resp, "Missing orgDiv");
+            if (isBlank(data))   return bad(resp, "Missing body");
+
+            JSONObject jsonObj = new JSONObject(data);
+
+            // required
+            String courseId = jsonObj.optString("courseId");
+            String fileName = jsonObj.optString("fileName");   // SP expects @p_fileName
+            String fileType = jsonObj.optString("fileType");
+            String duration = jsonObj.optString("duration");   // "12%" etc
+
+            // optional advanced tracking (SP uses these)
+            String sessionUid   = jsonObj.optString("sessionUid");
+            String deltaSeconds = jsonObj.optString("deltaSeconds"); // can be numeric string
+            String location     = jsonObj.optString("location");
+            String status       = jsonObj.optString("status");
+            String scoreRaw     = jsonObj.optString("scoreRaw");
+            String scoreScaled  = jsonObj.optString("scoreScaled");
+            String eventType    = jsonObj.optString("eventType");
+            String scormKey     = jsonObj.optString("scormKey");
+            String scormValue   = jsonObj.optString("scormValue");
+            String suspendData  = jsonObj.optString("suspendData");
+
+            // meta:{source,reason,key,value}
+            JSONObject meta = jsonObj.optJSONObject("meta");
+            String metaSource = meta != null ? meta.optString("source") : "";
+            String metaReason = meta != null ? meta.optString("reason") : "";
+            String metaKey    = meta != null ? meta.optString("key") : "";
+            String metaValue  = meta != null ? meta.optString("value") : "";
+
+            // hard caps (avoid massive SET string + DB packet issues)
+            scormValue  = trunc(scormValue, 8000);
+            suspendData = trunc(suspendData, 60000);
+            metaValue   = trunc(metaValue, 2000);
+            location    = trunc(location, 255);
+            status      = trunc(status, 50);
+            eventType   = trunc(eventType, 50);
+            scormKey    = trunc(scormKey, 255);
+            fileName    = trunc(fileName, 120);
+            fileType    = trunc(fileType, 30);
+
+            if (isBlank(courseId)) return bad(resp, "Missing courseId");
+            if (isBlank(fileName)) return bad(resp, "Missing fileName");
+            if (isBlank(fileType)) return bad(resp, "Missing fileType");
+            if (isBlank(duration)) return bad(resp, "Missing duration");
+
+            // ✅ If sessionUid missing, create deterministic one (stable per user+course+file)
+            if (isBlank(sessionUid)) {
+                String safeFile = fileName.replaceAll("[^a-zA-Z0-9]+", "_");
+                sessionUid = "LEGACY_" + userId + "_" + courseId + "_" + safeFile;
+                sessionUid = trunc(sessionUid, 120);
+            }
+
+            // ✅ deltaSeconds numeric safe (we inject into SET as number; avoids SQL injection risk)
+            Long deltaSec = parseLongSafe(deltaSeconds, 0L);
+            if (deltaSec < 0) deltaSec = 0L;
+            if (deltaSec > 3600L) {
+                // cap per event (1 hour) to avoid bad clients sending huge values
+                deltaSec = 3600L;
+            }
+
+            // ✅ Build SP actionValue (SET @p_* vars)
+            // NOTE: We do NOT include @data (not needed by SP) to keep payload smaller.
+            String actionValue =
+                    "SET " +
+                    " @p_userId='" + esc(userId) + "'," +
+                    " @p_org='" + esc(org) + "'," +
+                    " @p_orgDiv='" + esc(orgDiv) + "'," +
+                    " @p_courseId='" + esc(courseId) + "'," +
+                    " @p_fileName='" + esc(fileName) + "'," +
+                    " @p_fileType='" + esc(fileType) + "'," +
+                    " @p_duration='" + esc(duration) + "'," +
+
+                    " @p_sessionUid='" + esc(sessionUid) + "'," +
+                    " @p_deltaSeconds=" + deltaSec + "," +
+                    " @p_location='" + esc(nullIfBlank(location)) + "'," +
+                    " @p_status='" + esc(nullIfBlank(status)) + "'," +
+                    " @p_scoreRaw='" + esc(nullIfBlank(scoreRaw)) + "'," +
+                    " @p_scoreScaled='" + esc(nullIfBlank(scoreScaled)) + "'," +
+                    " @p_eventType='" + esc(nullIfBlank(eventType)) + "'," +
+                    " @p_scormKey='" + esc(nullIfBlank(scormKey)) + "'," +
+                    " @p_scormValue='" + esc(nullIfBlank(scormValue)) + "'," +
+                    " @p_suspendData='" + esc(nullIfBlank(suspendData)) + "'," +
+
+                    " @p_metaSource='" + esc(nullIfBlank(metaSource)) + "'," +
+                    " @p_metaReason='" + esc(nullIfBlank(metaReason)) + "'," +
+                    " @p_metaKey='" + esc(nullIfBlank(metaKey)) + "'," +
+                    " @p_metaValue='" + esc(nullIfBlank(metaValue)) + "';";
+
+            logger.info("saveCourseDuration actionValue built");
+
+            // 1) Save (summary upsert + session upsert + event insert + per-location time)
+            em.createNamedStoredProcedureQuery("academic_course_routines")
+                    .setParameter("actionType", "saveCourseDuration")
+                    .setParameter("actionValue", actionValue)
+                    .execute();
+
+            // 2) Return fresh durations for this user+course
+            List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
+                    .setParameter("actionType", "getCourseDurations")
+                    .setParameter("actionValue",
+                            "SET @p_userId='" + esc(userId) + "', @p_courseId='" + esc(courseId) + "';")
+                    .getResultList();
+
+            resp.setBody(mapCourseDurations(rows));
+            resp.setCode("Success");
+            resp.setMessage("Progress updated successfully");
+
+            return new ResponseEntity<>(resp, HttpStatus.OK);
+
+        } catch (Exception e) {
+            logger.error("Error in saveCourseDuration: ", e);
+            try {
+                String[] err = serverDao.errorProcedureCall(e);
+                resp.setCode("Failed");
+                resp.setMessage(err.length > 1 ? err[1] : "Oops! Something went wrong");
+            } catch (Exception nestedException) {
+                logger.error("Error while handling exception: ", nestedException);
+                resp.setCode("Failed");
+                resp.setMessage("Oops! Something went wrong during error handling");
+            }
+            return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<JsonResponse<Object>> getCourseDurations(String userId, String courseId) {
+        logger.info("method: getCourseDurations Starts");
+
+        JsonResponse<Object> resp = new JsonResponse<>();
+        try {
+            if (isBlank(userId)) return bad(resp, "Missing userId");
+            if (isBlank(courseId)) return bad(resp, "Missing courseId");
+
+            List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
+                    .setParameter("actionType", "getCourseDurations")
+                    .setParameter("actionValue",
+                            "SET @p_userId='" + esc(userId) + "', @p_courseId='" + esc(courseId) + "';")
+                    .getResultList();
+
+            resp.setBody(mapCourseDurations(rows));
+            resp.setCode("Success");
+            resp.setMessage("Fetched durations");
+            return new ResponseEntity<>(resp, HttpStatus.OK);
+
+        } catch (Exception e) {
+            logger.error("Error in getCourseDurations: ", e);
+            resp.setCode("Failed");
+            resp.setMessage("Failed to fetch durations");
+            return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // ✅ Must match SP SELECT order:
+    // 0 durationId, 1 userId, 2 courseId, 3 fileName, 4 fileType,
+    // 5 duration, 6 totalSeconds, 7 lastLocation, 8 status,
+    // 9 scoreRaw, 10 scoreScaled, 11 updatedOn
+    private List<Map<String, Object>> mapCourseDurations(List<Object[]> rows) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (rows == null) return out;
+
+        for (Object[] r : rows) {
+            if (r == null) continue;
+
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("durationId",   asLong(r, 0));
+            m.put("userId",       asStr(r, 1));
+            m.put("courseId",     asStr(r, 2));
+            m.put("fileName",     asStr(r, 3));
+            m.put("fileType",     asStr(r, 4));
+            m.put("duration",     asDouble(r, 5));
+
+            m.put("totalSeconds", asLong(r, 6));
+            m.put("lastLocation", asStr(r, 7));
+            m.put("status",       asStr(r, 8));
+            m.put("scoreRaw",     asStr(r, 9));
+            m.put("scoreScaled",  asStr(r, 10));
+            m.put("updatedOn",    r.length > 11 ? r[11] : null);
+
+            out.add(m);
+        }
+        return out;
+    }
+
+    /* ---------------- helpers ---------------- */
+
+    private ResponseEntity<JsonResponse<Object>> bad(JsonResponse<Object> resp, String msg) {
+        resp.setCode("Failed");
+        resp.setMessage(msg);
+        resp.setBody(null);
+        return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private String nullIfBlank(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    // Escape for SET @p_x='...'
+    private String esc(String s) {
+        if (s == null) return "";
+        // escape backslash and single quote
+        return s.replace("\\", "\\\\").replace("'", "\\'");
+    }
+
+    private String trunc(String s, int max) {
+        if (s == null) return null;
+        if (max <= 0) return "";
+        if (s.length() <= max) return s;
+        return s.substring(0, max);
+    }
+
+    private Long parseLongSafe(String raw, Long def) {
+        try {
+            if (raw == null) return def;
+            String t = raw.trim();
+            if (t.isEmpty()) return def;
+            if (!NUMERIC.matcher(t).matches()) return def;
+            BigDecimal bd = new BigDecimal(t);
+            return bd.longValue();
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    private Long asLong(Object[] r, int idx) {
+        try {
+            if (r == null || idx < 0 || idx >= r.length) return null;
+            Object v = r[idx];
+            if (v == null) return null;
+            if (v instanceof Number) return ((Number) v).longValue();
+            String s = String.valueOf(v).trim();
+            if (s.isEmpty()) return null;
+            return Long.parseLong(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String asStr(Object[] r, int idx) {
+        try {
+            if (r == null || idx < 0 || idx >= r.length) return null;
+            Object v = r[idx];
+            if (v == null) return null;
+            String s = String.valueOf(v);
+            return s == null ? null : s;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Double asDouble(Object[] r, int idx) {
+        try {
+            if (r == null || idx < 0 || idx >= r.length) return null;
+            Object v = r[idx];
+            if (v == null) return null;
+            if (v instanceof Number) return ((Number) v).doubleValue();
+            String s = String.valueOf(v).trim();
+            if (s.isEmpty()) return null;
+            return Double.parseDouble(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
 }
