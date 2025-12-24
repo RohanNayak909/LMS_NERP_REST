@@ -250,32 +250,35 @@ public class RestAcademicCourseController {
 	
 	
 
-// ✅ Keep SAME endpoint (your Next.js already calls this)
-@PostMapping(value = "rest-academic-course-duration-add")
-public ResponseEntity<JsonResponse<Object>> saveCourseDuration(
-		@RequestBody String data,
-		@RequestParam String userId,
-		@RequestParam String org,
-		@RequestParam String orgDiv,
-		HttpServletRequest request) {
+	// ✅ Keep SAME endpoint (your Next.js already calls this)
+	@PostMapping(value = "rest-academic-course-duration-add")
+	public ResponseEntity<JsonResponse<Object>> saveCourseDuration(
+			@RequestBody String data,
+			@RequestParam String userId,
+			@RequestParam String org,
+			@RequestParam String orgDiv,
+			HttpServletRequest request) {
 
-	logger.info("Method : saveCourseDuration starts");
-	ResponseEntity<JsonResponse<Object>> resp = academicCourseDao.saveCourseDuration(data, userId, org, orgDiv);
-	logger.info("Method : saveCourseDuration ends");
-	return resp;
-}
+		logger.info("Method : saveCourseDuration starts");
+		ResponseEntity<JsonResponse<Object>> resp = academicCourseDao.saveCourseDuration(data, userId, org, orgDiv);
+		logger.info("Method : saveCourseDuration ends");
+		return resp;
+	}
 
-// ✅ GET endpoint used by Next.js /api/lms/course-durations
-@GetMapping(value = "rest-academic-course-duration-get")
-public ResponseEntity<JsonResponse<Object>> getCourseDurations(
-		@RequestParam String userId,
-		@RequestParam String courseId) {
+	// ✅ GET endpoint used by Next.js /api/lms/course-durations
+	// ✅ Backward compatible: fileName/fileType are OPTIONAL
+	@GetMapping(value = "rest-academic-course-duration-get")
+	public ResponseEntity<JsonResponse<Object>> getCourseDurations(
+			@RequestParam String userId,
+			@RequestParam String courseId,
+			@RequestParam(required = false) String fileName,
+			@RequestParam(required = false) String fileType) {
 
-	logger.info("Method : getCourseDurations starts");
-	ResponseEntity<JsonResponse<Object>> resp = academicCourseDao.getCourseDurations(userId, courseId);
-	logger.info("Method : getCourseDurations ends");
-	return resp;
-}
+		logger.info("Method : getCourseDurations starts");
+		ResponseEntity<JsonResponse<Object>> resp = academicCourseDao.getCourseDurations(userId, courseId, fileName, fileType);
+		logger.info("Method : getCourseDurations ends");
+		return resp;
+	}
 
 	@RequestMapping(value = "rest-getadminAllHeadCount", method = { RequestMethod.GET })
 	public JsonResponse<Object> getadminAllHeadCount(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String userId) {
