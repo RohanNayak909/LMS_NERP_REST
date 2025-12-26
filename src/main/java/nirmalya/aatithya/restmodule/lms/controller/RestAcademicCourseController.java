@@ -431,58 +431,44 @@ public ResponseEntity<JsonResponse<Object>> getCourseDurations(
 	 *   "deviceId":"WEB_CHROME"
 	 * }
 	 */
-	@PostMapping(value = "/rest-course-progress-save")
-	public ResponseEntity<JsonResponse<Object>> saveProgress(
-			@RequestBody String payload,
-			@RequestParam String userId,
-			@RequestParam String org,
-			@RequestParam String orgDiv) {
 
-		return courseProgressDao.saveProgress(payload, userId, org, orgDiv);
+
+	@PostMapping("rest-course-progress-save")
+	public ResponseEntity<JsonResponse<Object>> saveProgress(
+		@RequestBody String payload,
+		@RequestParam String userId,
+		@RequestParam String org,
+
+		@RequestParam String orgDiv) {
+	  return courseProgressDao.saveProgress(payload, userId, org, orgDiv);
 	}
+  
 
 
 	
-	/**
-	 * GET all progress rows for a course
-	 * GET /master/rest-course-progress-map?userId=..&courseId=..
-	 */
-	@GetMapping(value = "rest-course-progress-map")
+	@GetMapping("rest-course-progress-map")
 	public ResponseEntity<JsonResponse<Object>> getCourseProgressMap(
-			@RequestParam String userId,
-			@RequestParam String courseId) {
-				logger.info("rest-course-progress-map"+userId);
-
-		return courseProgressDao.getCourseProgressMap(userId, courseId);
+		@RequestParam String userId,
+		@RequestParam String courseId) {
+	  return courseProgressDao.getCourseProgressMap(userId, courseId);
 	}
-
-	/**
-	 * GET resume for one content
-	 * GET /master/rest-course-progress-resume?userId=..&courseId=..&contentKey=..
-	 */
-	@GetMapping(value = "/rest-course-progress-resume")
+  
+	@GetMapping("rest-course-progress-resume")
 	public ResponseEntity<JsonResponse<Object>> getContentResume(
-			@RequestParam String userId,
-			@RequestParam String courseId,
-			@RequestParam String contentKey) {
-
-		return courseProgressDao.getContentResume(userId, courseId, contentKey);
+		@RequestParam String userId,
+		@RequestParam String courseId,
+		@RequestParam String contentKey) {
+	  return courseProgressDao.getContentResume(userId, courseId, contentKey);
 	}
-
-	/**
-	 * Reset one content progress
-	 * POST /master/rest-course-progress-reset?userId=..&org=..&orgDiv=..
-	 * Body JSON: { "courseId":"..", "contentKey":"..", "fileType":"scorm", "sessionUid":"..", "deviceId":".." }
-	 */
-	@PostMapping(value = "/rest-course-progress-reset")
+  
+	@PostMapping("rest-course-progress-reset")
 	public ResponseEntity<JsonResponse<Object>> resetContentProgress(
-			@RequestBody String payload,
-			@RequestParam String userId,
-			@RequestParam String org,
-			@RequestParam String orgDiv) {
-
-		return courseProgressDao.resetContentProgress(payload, userId, org, orgDiv);
+		@RequestBody String payload,
+		@RequestParam String userId,
+		@RequestParam String org,
+		@RequestParam String orgDiv) {
+	  return courseProgressDao.resetContentProgress(payload, userId, org, orgDiv);
 	}
-
+  
 
 }

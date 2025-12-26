@@ -1,6 +1,5 @@
 package nirmalya.aatithya.restmodule.common.security;
 
-import static org.mockito.Mockito.reset;
 
 import java.util.Arrays;
 
@@ -206,14 +205,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/his/lms-contactList").permitAll()
 
 
-				.antMatchers("/his/rest-course-progress-save").permitAll()
-
-				.antMatchers("/his/rest-course-progress-map").permitAll()
-
-				.antMatchers("/his/rest-course-progress-resume").permitAll()
-
-				.antMatchers("/his/rest-course-progress-reset").permitAll()
-
+				
 
 				
 
@@ -276,6 +268,13 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
 			  .antMatchers("/master/payment/retake/confirm").permitAll()
 
+			  .antMatchers("/his/rest-course-progress-save").permitAll()
+
+			  .antMatchers("/his/rest-course-progress-map").permitAll()
+
+			  .antMatchers("/his/rest-course-progress-resume").permitAll()
+
+			  .antMatchers("/his/rest-course-progress-reset").permitAll()
 
 			  .antMatchers("/otp/request").permitAll()
 

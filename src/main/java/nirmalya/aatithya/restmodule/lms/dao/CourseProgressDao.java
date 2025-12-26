@@ -65,11 +65,13 @@ public class CourseProgressDao {
 			String eventType = pickFirstNonEmpty(text(n, "eventType"), "PROGRESS");
 			String eventTs = text(n, "eventTs");
 
-			// numeric / percent handling (supports 20, "20", "20%")
-			String progressPercent = normalizePercent(n.get("progressPercent"));
-			String currentSeconds = normalizeInt(n.get("currentSeconds"));
-			String totalSeconds = normalizeInt(n.get("totalSeconds"));
-			String runtimeVer = normalizeInt(n.get("runtimeVer"));
+			// ✅ supports UI keys: progressPercent OR percent OR duration ("1%")
+			JsonNode percentNode = pickNode(n, "progressPercent", "percent", "duration");
+			String progressPercent = normalizePercent(percentNode);
+
+			String currentSeconds = normalizeInt(pickNode(n, "currentSeconds"));
+			String totalSeconds = normalizeInt(pickNode(n, "totalSeconds"));
+			String runtimeVer = normalizeInt(pickNode(n, "runtimeVer"));
 
 			String scoreRaw = text(n, "scoreRaw");
 			String scoreScaled = text(n, "scoreScaled");
@@ -79,42 +81,64 @@ public class CourseProgressDao {
 					? n.get("runtimeState").asText()
 					: null;
 
-			String actionValue = buildSet(new LinkedHashMap<String, Object>() {{
-				put("@p_userId", userId);
-				put("@p_org", org);
-				put("@p_orgDiv", orgDiv);
+			// ✅ build SET string
+			LinkedHashMap<String, Object> vars = new LinkedHashMap<>();
+			vars.put("@p_userId", userId);
+			vars.put("@p_org", org);
+			vars.put("@p_orgDiv", orgDiv);
 
-				put("@p_courseId", courseId);
-				put("@p_contentKey", contentKey);
-				put("@p_fileName", fileName);
-				put("@p_fileType", fileType);
+			vars.put("@p_courseId", courseId);
+			vars.put("@p_contentKey", contentKey);
+			vars.put("@p_fileName", fileName);
+			vars.put("@p_fileType", fileType);
 
-				put("@p_status", status);
-				put("@p_progressPercent", progressPercent); // numeric string ok
-				put("@p_currentSeconds", currentSeconds);
-				put("@p_totalSeconds", totalSeconds);
-				put("@p_location", location);
+			vars.put("@p_status", status);
+			vars.put("@p_progressPercent", progressPercent);
+			vars.put("@p_currentSeconds", currentSeconds);
+			vars.put("@p_totalSeconds", totalSeconds);
+			vars.put("@p_location", location);
 
-				put("@p_scoreRaw", scoreRaw);
-				put("@p_scoreScaled", scoreScaled);
+			vars.put("@p_scoreRaw", scoreRaw);
+			vars.put("@p_scoreScaled", scoreScaled);
 
-				put("@p_runtimeState", runtimeState);
-				put("@p_runtimeVer", runtimeVer);
+			vars.put("@p_runtimeState", runtimeState);
+			vars.put("@p_runtimeVer", runtimeVer);
 
-				put("@p_eventType", eventType);
-				put("@p_eventTs", eventTs);
+			vars.put("@p_eventType", eventType);
+			vars.put("@p_eventTs", eventTs);
 
-				put("@p_sessionUid", sessionUid);
-				put("@p_deviceId", deviceId);
-			}});
+			vars.put("@p_sessionUid", sessionUid);
+			vars.put("@p_deviceId", deviceId);
+
+			// ✅ IMPORTANT: event table has payload NOT NULL → SP should store JSON in payload
+			vars.put("@p_payload", payload);
+
+			String actionValue = buildSet(vars);
 
 			List<Map<String, Object>> rows = callForMap("upsertProgress", actionValue);
 
+			// ✅ Normalize response: don’t lie with "Progress saved" if SP returned ERROR
+			if (rows != null && !rows.isEmpty() && rows.get(0) != null) {
+				Map<String, Object> first = rows.get(0);
+				String spStatus = safeStr(first.get("status"));
+
+				if ("ERROR".equalsIgnoreCase(spStatus)) {
+					resp.setCode("Failed");
+					resp.setMessage(pickFirstNonEmpty(safeStr(first.get("message")), "Progress save failed"));
+					resp.setBody(first);
+					return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+
+				resp.setCode("Success");
+				resp.setMessage(pickFirstNonEmpty(safeStr(first.get("message")), "Progress saved"));
+				resp.setBody(first);
+				return new ResponseEntity<>(resp, HttpStatus.CREATED);
+			}
+
+			// No rows case (rare)
 			resp.setCode("Success");
 			resp.setMessage("Progress saved");
-			if (rows != null && !rows.isEmpty()) {
-				resp.setBody(rows.get(0)); // status/message/applied/userId/courseId/contentKey
-			}
+			return new ResponseEntity<>(resp, HttpStatus.CREATED);
 
 		} catch (Exception e) {
 			logger.error("Error in saveProgress: ", e);
@@ -126,11 +150,10 @@ public class CourseProgressDao {
 				resp.setCode("Failed");
 				resp.setMessage("Oops! Something went wrong during error handling");
 			}
+			return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+		} finally {
+			logger.info("method: saveProgress Ends");
 		}
-
-		ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
-		logger.info("method: saveProgress Ends");
-		return response;
 	}
 
 	/* =========================================
@@ -149,16 +172,19 @@ public class CourseProgressDao {
 				return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
 			}
 
-			String actionValue = buildSet(new LinkedHashMap<String, Object>() {{
-				put("@p_userId", userId);
-				put("@p_courseId", courseId);
-			}});
+			LinkedHashMap<String, Object> vars = new LinkedHashMap<>();
+			vars.put("@p_userId", userId);
+			vars.put("@p_courseId", courseId);
+
+			String actionValue = buildSet(vars);
 
 			List<Map<String, Object>> rows = callForMap("getCourseProgressMap", actionValue);
 
 			resp.setCode("Success");
 			resp.setMessage("Data fetched");
 			resp.setBody(rows);
+
+			return new ResponseEntity<>(resp, HttpStatus.OK);
 
 		} catch (Exception e) {
 			logger.error("Error in getCourseProgressMap: ", e);
@@ -170,11 +196,10 @@ public class CourseProgressDao {
 				resp.setCode("Failed");
 				resp.setMessage("Oops! Something went wrong during error handling");
 			}
+			return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+		} finally {
+			logger.info("method: getCourseProgressMap Ends");
 		}
-
-		ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.OK);
-		logger.info("method: getCourseProgressMap Ends");
-		return response;
 	}
 
 	/* =========================================
@@ -193,17 +218,20 @@ public class CourseProgressDao {
 				return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
 			}
 
-			String actionValue = buildSet(new LinkedHashMap<String, Object>() {{
-				put("@p_userId", userId);
-				put("@p_courseId", courseId);
-				put("@p_contentKey", contentKey);
-			}});
+			LinkedHashMap<String, Object> vars = new LinkedHashMap<>();
+			vars.put("@p_userId", userId);
+			vars.put("@p_courseId", courseId);
+			vars.put("@p_contentKey", contentKey);
+
+			String actionValue = buildSet(vars);
 
 			List<Map<String, Object>> rows = callForMap("getContentResume", actionValue);
 
 			resp.setCode("Success");
 			resp.setMessage("Data fetched");
 			resp.setBody((rows != null && !rows.isEmpty()) ? rows.get(0) : new LinkedHashMap<>());
+
+			return new ResponseEntity<>(resp, HttpStatus.OK);
 
 		} catch (Exception e) {
 			logger.error("Error in getContentResume: ", e);
@@ -215,11 +243,10 @@ public class CourseProgressDao {
 				resp.setCode("Failed");
 				resp.setMessage("Oops! Something went wrong during error handling");
 			}
+			return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+		} finally {
+			logger.info("method: getContentResume Ends");
 		}
-
-		ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.OK);
-		logger.info("method: getContentResume Ends");
-		return response;
 	}
 
 	/* =========================================
@@ -227,7 +254,7 @@ public class CourseProgressDao {
 	========================================= */
 	@SuppressWarnings("unchecked")
 	public ResponseEntity<JsonResponse<Object>> resetContentProgress(String payload, String userId, String org, String orgDiv) {
-		logger.info("method: resetContentProgress Starts");
+		logger.info("method: resetContentProgress Starts payload(size)={}", payload != null ? payload.length() : 0);
 
 		JsonResponse<Object> resp = new JsonResponse<>();
 
@@ -246,22 +273,43 @@ public class CourseProgressDao {
 				return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
 			}
 
-			String actionValue = buildSet(new LinkedHashMap<String, Object>() {{
-				put("@p_userId", userId);
-				put("@p_org", org);
-				put("@p_orgDiv", orgDiv);
-				put("@p_courseId", courseId);
-				put("@p_contentKey", contentKey);
-				put("@p_fileType", fileType);
-				put("@p_sessionUid", sessionUid);
-				put("@p_deviceId", deviceId);
-			}});
+			LinkedHashMap<String, Object> vars = new LinkedHashMap<>();
+			vars.put("@p_userId", userId);
+			vars.put("@p_org", org);
+			vars.put("@p_orgDiv", orgDiv);
+			vars.put("@p_courseId", courseId);
+			vars.put("@p_contentKey", contentKey);
+			vars.put("@p_fileType", fileType);
+			vars.put("@p_sessionUid", sessionUid);
+			vars.put("@p_deviceId", deviceId);
+
+			// ✅ store payload into event table
+			vars.put("@p_payload", payload);
+
+			String actionValue = buildSet(vars);
 
 			List<Map<String, Object>> rows = callForMap("resetContentProgress", actionValue);
 
+			if (rows != null && !rows.isEmpty() && rows.get(0) != null) {
+				Map<String, Object> first = rows.get(0);
+				String spStatus = safeStr(first.get("status"));
+
+				if ("ERROR".equalsIgnoreCase(spStatus)) {
+					resp.setCode("Failed");
+					resp.setMessage(pickFirstNonEmpty(safeStr(first.get("message")), "Progress reset failed"));
+					resp.setBody(first);
+					return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+
+				resp.setCode("Success");
+				resp.setMessage(pickFirstNonEmpty(safeStr(first.get("message")), "Progress reset"));
+				resp.setBody(first);
+				return new ResponseEntity<>(resp, HttpStatus.CREATED);
+			}
+
 			resp.setCode("Success");
 			resp.setMessage("Progress reset");
-			if (rows != null && !rows.isEmpty()) resp.setBody(rows.get(0));
+			return new ResponseEntity<>(resp, HttpStatus.CREATED);
 
 		} catch (Exception e) {
 			logger.error("Error in resetContentProgress: ", e);
@@ -273,11 +321,10 @@ public class CourseProgressDao {
 				resp.setCode("Failed");
 				resp.setMessage("Oops! Something went wrong during error handling");
 			}
+			return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+		} finally {
+			logger.info("method: resetContentProgress Ends");
 		}
-
-		ResponseEntity<JsonResponse<Object>> response = new ResponseEntity<>(resp, HttpStatus.CREATED);
-		logger.info("method: resetContentProgress Ends");
-		return response;
 	}
 
 	/* =========================================================
@@ -296,14 +343,8 @@ public class CourseProgressDao {
 		q.execute();
 		List<Object[]> rs = q.getResultList();
 
-		// If SP returns status/message row (upsert/reset), it will be 1-row with columns:
-		// status, message, applied, userId, courseId, contentKey (or subset)
-		// If SP returns map/resume, it returns the SELECT aliases exactly.
 		List<Map<String, Object>> out = new ArrayList<>();
 
-		// Heuristic:
-		// - If column count is small (<=6) -> treat as status response
-		// - else treat as progress row
 		for (Object rowObj : rs) {
 			Object[] row = (Object[]) rowObj;
 
@@ -354,6 +395,24 @@ public class CourseProgressDao {
 	   Helpers
 	========================================================= */
 
+	private static String safeStr(Object o) {
+		return o == null ? "" : String.valueOf(o);
+	}
+
+	private static JsonNode pickNode(JsonNode root, String... keys) {
+		if (root == null || keys == null) return null;
+		for (String k : keys) {
+			if (k == null) continue;
+			JsonNode v = root.get(k);
+			if (v == null || v.isNull()) continue;
+
+			// accept numbers, booleans, etc.
+			String s = v.isTextual() ? v.asText() : v.toString();
+			if (s != null && !s.trim().isEmpty()) return v;
+		}
+		return null;
+	}
+
 	private static String text(JsonNode n, String key) {
 		if (n == null || key == null) return null;
 		JsonNode v = n.get(key);
@@ -396,7 +455,6 @@ public class CourseProgressDao {
 			if (s == null) return null;
 			s = s.trim();
 			if (s.endsWith("%")) s = s.substring(0, s.length() - 1).trim();
-			// keep digits + dot
 			s = s.replaceAll("[^0-9.]", "");
 			return s.isEmpty() ? null : s;
 		} catch (Exception ex) {
@@ -427,7 +485,6 @@ public class CourseProgressDao {
 	private static String toSqlLiteral(Object v) {
 		if (v == null) return "NULL";
 
-		// If value is already numeric string and looks like a number -> keep unquoted
 		if (v instanceof Number) return String.valueOf(v);
 
 		String s = String.valueOf(v);
@@ -439,7 +496,7 @@ public class CourseProgressDao {
 		if (s.matches("^[0-9]+(\\.[0-9]+)?$")) return s;
 
 		// Escape for MySQL string literal
-		s = s.replace("\\", "\\\\"); // keep JSON escapes stable
+		s = s.replace("\\", "\\\\");
 		s = s.replace("'", "''");
 		return "'" + s + "'";
 	}
