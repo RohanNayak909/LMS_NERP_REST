@@ -107,7 +107,7 @@ public class CourseProgressDao {
 				put("@p_sessionUid", sessionUid);
 				put("@p_deviceId", deviceId);
 			}});
-
+logger.info("sssssssssss"+actionValue);
 			List<Map<String, Object>> rows = callForMap("upsertProgress", actionValue);
 
 			resp.setCode("Success");

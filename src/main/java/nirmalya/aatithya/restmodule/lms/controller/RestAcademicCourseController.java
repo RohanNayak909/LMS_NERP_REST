@@ -431,13 +431,14 @@ public ResponseEntity<JsonResponse<Object>> getCourseDurations(
 	 *   "deviceId":"WEB_CHROME"
 	 * }
 	 */
-	@PostMapping(value = "/rest-course-progress-save")
+	@PostMapping(value = "rest-course-progress-save")
 	public ResponseEntity<JsonResponse<Object>> saveProgress(
 			@RequestBody String payload,
 			@RequestParam String userId,
 			@RequestParam String org,
 			@RequestParam String orgDiv) {
-
+		
+		logger.info("iiiii"+payload);
 		return courseProgressDao.saveProgress(payload, userId, org, orgDiv);
 	}
 
