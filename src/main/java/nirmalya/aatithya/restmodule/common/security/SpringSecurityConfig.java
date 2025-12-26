@@ -1,5 +1,7 @@
 package nirmalya.aatithya.restmodule.common.security;
 
+import static org.mockito.Mockito.reset;
+
 import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -200,6 +202,23 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
 
 
+				.antMatchers("/his/lms-getCountryList").permitAll()
+				.antMatchers("/his/lms-contactList").permitAll()
+
+
+				.antMatchers("/his/rest-course-progress-save").permitAll()
+
+				.antMatchers("/his/rest-course-progress-map").permitAll()
+
+				.antMatchers("/his/rest-course-progress-resume").permitAll()
+
+				.antMatchers("/his/rest-course-progress-reset").permitAll()
+
+
+				
+
+				
+				
     // ---- add ALL exam routes here ----
         // list quizzes mapped to product, quiz headers
         .antMatchers("/master/rest-product-quizzes").permitAll()

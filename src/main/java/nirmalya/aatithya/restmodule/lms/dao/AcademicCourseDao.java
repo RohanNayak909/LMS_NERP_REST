@@ -1625,313 +1625,294 @@ logger.info("dropDownModel"+dropDownModel);
 
 
 
+	@org.springframework.beans.factory.annotation.Autowired(required = false)
 
-	private static final Pattern NUMERIC = Pattern.compile("^[0-9]+(\\.[0-9]+)?$");
+    private static final Pattern NUMERIC = Pattern.compile("^[0-9]+(\\.[0-9]+)?$");
 
-	/* =========================================
-	   SAVE (POST) — unchanged endpoint
-	   Improvement: after save, fetch only this file progress (if fileName present)
-	========================================= */
+
+
+
 	@SuppressWarnings("unchecked")
-	public ResponseEntity<JsonResponse<Object>> saveCourseDuration(String data, String userId, String org, String orgDiv) {
-		logger.info("method: saveCourseDuration Starts");
+public ResponseEntity<JsonResponse<Object>> saveCourseDuration(
+        String data, String userId, String org, String orgDiv) {
 
-		JsonResponse<Object> resp = new JsonResponse<>();
+    logger.info("method: saveCourseDuration Starts");
 
-		try {
-			if (isBlank(userId)) return bad(resp, "Missing userId");
-			if (isBlank(org))    return bad(resp, "Missing org");
-			if (isBlank(orgDiv)) return bad(resp, "Missing orgDiv");
-			if (isBlank(data))   return bad(resp, "Missing body");
+    JsonResponse<Object> resp = new JsonResponse<>();
 
-			JSONObject jsonObj = new JSONObject(data);
+    try {
+        if (isBlank(userId)) return bad(resp, "Missing userId");
+        if (isBlank(data))   return bad(resp, "Missing body");
 
-			// required
-			String courseId = jsonObj.optString("courseId");
-			String fileName = jsonObj.optString("fileName");
-			String fileType = jsonObj.optString("fileType");
-			String duration = jsonObj.optString("duration"); // can be "12%" or "12.5%"
+        // org/orgDiv now optional
+        org = trunc(org, 45);
+        orgDiv = trunc(orgDiv, 45);
 
-			// optional advanced tracking (SP uses these)
-			String sessionUid   = jsonObj.optString("sessionUid");
-			String deltaSeconds = jsonObj.optString("deltaSeconds");
-			String location     = jsonObj.optString("location");
-			String status       = jsonObj.optString("status");
-			String scoreRaw     = jsonObj.optString("scoreRaw");
-			String scoreScaled  = jsonObj.optString("scoreScaled");
-			String eventType    = jsonObj.optString("eventType");
-			String scormKey     = jsonObj.optString("scormKey");
-			String scormValue   = jsonObj.optString("scormValue");
-			String suspendData  = jsonObj.optString("suspendData");
+        JSONObject jsonObj = new JSONObject(data);
 
-			// meta:{source,reason,key,value}
-			JSONObject meta = jsonObj.optJSONObject("meta");
-			String metaSource = meta != null ? meta.optString("source") : "";
-			String metaReason = meta != null ? meta.optString("reason") : "";
-			String metaKey    = meta != null ? meta.optString("key") : "";
-			String metaValue  = meta != null ? meta.optString("value") : "";
+        String courseId = trunc(jsonObj.optString("courseId"), 60);
+        String fileName = trunc(jsonObj.optString("fileName"), 512);
+        String fileType = trunc(jsonObj.optString("fileType"), 50);
+        String duration = trunc(jsonObj.optString("duration"), 30);
 
-			// hard caps
-			scormValue  = trunc(scormValue, 8000);
-			suspendData = trunc(suspendData, 60000);
-			metaValue   = trunc(metaValue, 2000);
-			location    = trunc(location, 255);
-			status      = trunc(status, 50);
-			eventType   = trunc(eventType, 50);
-			scormKey    = trunc(scormKey, 255);
-			fileName    = trunc(fileName, 512);
-			fileType    = trunc(fileType, 50);
+        String sessionUid    = trunc(jsonObj.optString("sessionUid"), 120);
+        String deltaSeconds  = jsonObj.optString("deltaSeconds");
 
-			if (isBlank(courseId)) return bad(resp, "Missing courseId");
-			if (isBlank(fileName)) return bad(resp, "Missing fileName");
-			if (isBlank(fileType)) return bad(resp, "Missing fileType");
-			if (isBlank(duration)) return bad(resp, "Missing duration");
+        // NEW: cross-device playback position fields (sent by frontend)
+        String currentSeconds = jsonObj.optString("currentSeconds");
+        String totalSeconds   = jsonObj.optString("totalSeconds");
 
-			// ✅ sessionUid: keep <= 120 (matches new table)
-			if (isBlank(sessionUid)) {
-				String safeFile = fileName.replaceAll("[^a-zA-Z0-9]+", "_");
-				sessionUid = "LEGACY_" + userId + "_" + courseId + "_" + safeFile;
-			}
-			sessionUid = trunc(sessionUid, 120);
+        String location     = trunc(jsonObj.optString("location"), 255);
+        String status       = trunc(jsonObj.optString("status"), 50);
+        String scoreRaw     = trunc(jsonObj.optString("scoreRaw"), 30);
+        String scoreScaled  = trunc(jsonObj.optString("scoreScaled"), 30);
+        String eventType    = trunc(jsonObj.optString("eventType"), 50);
+        String scormKey     = trunc(jsonObj.optString("scormKey"), 255);
+        String scormValue   = trunc(jsonObj.optString("scormValue"), 8000);
+        String suspendData  = trunc(jsonObj.optString("suspendData"), 60000);
 
-			// ✅ deltaSeconds numeric safe
-			Long deltaSec = parseLongSafe(deltaSeconds, 0L);
-			if (deltaSec < 0) deltaSec = 0L;
-			if (deltaSec > 3600L) deltaSec = 3600L;
+        JSONObject meta = jsonObj.optJSONObject("meta");
+        String metaSource = trunc(meta != null ? meta.optString("source") : "", 50);
+        String metaReason = trunc(meta != null ? meta.optString("reason") : "", 100);
+        String metaKey    = trunc(meta != null ? meta.optString("key") : "", 255);
+        String metaValue  = trunc(meta != null ? meta.optString("value") : "", 2000);
 
-			String actionValue =
-				"SET " +
-				" @p_userId='" + esc(userId) + "'," +
-				" @p_org='" + esc(org) + "'," +
-				" @p_orgDiv='" + esc(orgDiv) + "'," +
-				" @p_courseId='" + esc(courseId) + "'," +
-				" @p_fileName='" + esc(fileName) + "'," +
-				" @p_fileType='" + esc(fileType) + "'," +
-				" @p_duration='" + esc(duration) + "'," +
+        if (isBlank(courseId)) return bad(resp, "Missing courseId");
+        if (isBlank(fileName)) return bad(resp, "Missing fileName");
+        if (isBlank(fileType)) return bad(resp, "Missing fileType");
+        if (isBlank(duration)) return bad(resp, "Missing duration");
 
-				" @p_sessionUid='" + esc(sessionUid) + "'," +
-				" @p_deltaSeconds=" + deltaSec + "," +
-				" @p_location='" + esc(nullIfBlank(location)) + "'," +
-				" @p_status='" + esc(nullIfBlank(status)) + "'," +
-				" @p_scoreRaw='" + esc(nullIfBlank(scoreRaw)) + "'," +
-				" @p_scoreScaled='" + esc(nullIfBlank(scoreScaled)) + "'," +
-				" @p_eventType='" + esc(nullIfBlank(eventType)) + "'," +
-				" @p_scormKey='" + esc(nullIfBlank(scormKey)) + "'," +
-				" @p_scormValue='" + esc(nullIfBlank(scormValue)) + "'," +
-				" @p_suspendData='" + esc(nullIfBlank(suspendData)) + "'," +
+        // sessionUid fallback (legacy deterministic)
+        if (isBlank(sessionUid)) {
+            String safeFile = fileName.replaceAll("[^a-zA-Z0-9]+", "_");
+            sessionUid = "LEGACY_" + userId + "_" + courseId + "_" + safeFile;
+        }
+        sessionUid = trunc(sessionUid, 120);
 
-				" @p_metaSource='" + esc(nullIfBlank(metaSource)) + "'," +
-				" @p_metaReason='" + esc(nullIfBlank(metaReason)) + "'," +
-				" @p_metaKey='" + esc(nullIfBlank(metaKey)) + "'," +
-				" @p_metaValue='" + esc(nullIfBlank(metaValue)) + "';";
+        Long deltaSec = parseLongSafe(deltaSeconds, 0L);
+        if (deltaSec < 0) deltaSec = 0L;
+        if (deltaSec > 3600L) deltaSec = 3600L;
 
-			em.createNamedStoredProcedureQuery("academic_course_routines")
-					.setParameter("actionType", "saveCourseDuration")
-					.setParameter("actionValue", actionValue)
-					.execute();
+        Long curSec = parseLongSafe(currentSeconds, 0L);
+        if (curSec < 0) curSec = 0L;
+        if (curSec > 604800L) curSec = 604800L;
 
-			// ✅ Return fresh durations ONLY for this file (faster + cleaner)
-			List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
-					.setParameter("actionType", "getCourseDurations")
-					.setParameter("actionValue",
-							buildGetSet(userId, courseId, fileName, fileType))
-					.getResultList();
+        Long totSec = parseLongSafe(totalSeconds, 0L);
+        if (totSec < 0) totSec = 0L;
+        if (totSec > 604800L) totSec = 604800L;
 
-			resp.setBody(mapCourseDurations(rows));
-			resp.setCode("Success");
-			resp.setMessage("Progress updated successfully");
+        String actionValue =
+                "SET " +
+                " @p_userId='" + esc(userId) + "'," +
+                " @p_org='" + esc(nullIfBlank(org)) + "'," +
+                " @p_orgDiv='" + esc(nullIfBlank(orgDiv)) + "'," +
+                " @p_courseId='" + esc(courseId) + "'," +
+                " @p_fileName='" + esc(fileName) + "'," +
+                " @p_fileType='" + esc(fileType) + "'," +
+                " @p_duration='" + esc(duration) + "'," +
 
-			return new ResponseEntity<>(resp, HttpStatus.OK);
+                " @p_sessionUid='" + esc(sessionUid) + "'," +
+                " @p_deltaSeconds=" + deltaSec + "," +
 
-		} catch (Exception e) {
-			logger.error("Error in saveCourseDuration: ", e);
-			resp.setCode("Failed");
-			resp.setMessage(resolveErrorMsg(e));
-			return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
+                // NEW:
+                " @p_currentSeconds=" + curSec + "," +
+                " @p_totalSeconds=" + totSec + "," +
 
+                " @p_location='" + esc(nullIfBlank(location)) + "'," +
+                " @p_status='" + esc(nullIfBlank(status)) + "'," +
+                " @p_scoreRaw='" + esc(nullIfBlank(scoreRaw)) + "'," +
+                " @p_scoreScaled='" + esc(nullIfBlank(scoreScaled)) + "'," +
+                " @p_eventType='" + esc(nullIfBlank(eventType)) + "'," +
+                " @p_scormKey='" + esc(nullIfBlank(scormKey)) + "'," +
+                " @p_scormValue='" + esc(nullIfBlank(scormValue)) + "'," +
+                " @p_suspendData='" + esc(nullIfBlank(suspendData)) + "'," +
 
-	/* =========================================
-	   GET (supports optional fileName/fileType)
-	   If fileName passed → returns latest 1 row
-	   Else → returns all files for course
-	========================================= */
-	@SuppressWarnings("unchecked")
-	public ResponseEntity<JsonResponse<Object>> getCourseDurations(String userId, String courseId, String fileName, String fileType) {
-		logger.info("method: getCourseDurations Starts");
+                " @p_metaSource='" + esc(nullIfBlank(metaSource)) + "'," +
+                " @p_metaReason='" + esc(nullIfBlank(metaReason)) + "'," +
+                " @p_metaKey='" + esc(nullIfBlank(metaKey)) + "'," +
+                " @p_metaValue='" + esc(nullIfBlank(metaValue)) + "';";
 
-		JsonResponse<Object> resp = new JsonResponse<>();
-		try {
-			if (isBlank(userId)) return bad(resp, "Missing userId");
-			if (isBlank(courseId)) return bad(resp, "Missing courseId");
+        em.createNamedStoredProcedureQuery("academic_course_routines")
+                .setParameter("actionType", "saveCourseDuration")
+                .setParameter("actionValue", actionValue)
+                .execute();
 
-			fileName = trunc(fileName, 512);
-			fileType = trunc(fileType, 50);
+        // return only this file’s latest progress (fast resume)
+        List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
+                .setParameter("actionType", "getCourseDurations")
+                .setParameter("actionValue", buildGetSet(userId, courseId, fileName, fileType))
+                .getResultList();
 
-			List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
-					.setParameter("actionType", "getCourseDurations")
-					.setParameter("actionValue", buildGetSet(userId, courseId, fileName, fileType))
-					.getResultList();
+        resp.setBody(mapCourseDurations(rows));
+        resp.setCode("Success");
+        resp.setMessage("Progress updated successfully");
+        return new ResponseEntity<>(resp, HttpStatus.OK);
 
-			resp.setBody(mapCourseDurations(rows));
-			resp.setCode("Success");
-			resp.setMessage("Fetched durations");
-			return new ResponseEntity<>(resp, HttpStatus.OK);
+    } catch (Exception e) {
+        logger.error("Error in saveCourseDuration: ", e);
+        resp.setCode("Failed");
+        resp.setMessage(resolveErrorMsg(e));
+        return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
 
-		} catch (Exception e) {
-			logger.error("Error in getCourseDurations: ", e);
-			resp.setCode("Failed");
-			resp.setMessage("Failed to fetch durations");
-			return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
+@SuppressWarnings("unchecked")
+public ResponseEntity<JsonResponse<Object>> getCourseDurations(
+        String userId, String courseId, String fileName, String fileType) {
 
-	/* =========================
-	   Helpers
-	========================= */
+    logger.info("method: getCourseDurations Starts");
 
-	private String buildGetSet(String userId, String courseId, String fileName, String fileType) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("SET @p_userId='").append(esc(userId)).append("', ");
-		sb.append("@p_courseId='").append(esc(courseId)).append("'");
+    JsonResponse<Object> resp = new JsonResponse<>();
 
-		// Optional filters: if present SP returns only 1 latest row
-		if (!isBlank(fileName)) {
-			sb.append(", @p_fileName='").append(esc(fileName)).append("'");
-		}
-		if (!isBlank(fileType)) {
-			sb.append(", @p_fileType='").append(esc(fileType)).append("'");
-		}
-		sb.append(";");
-		return sb.toString();
-	}
+    try {
+        if (isBlank(userId))   return bad(resp, "Missing userId");
+        if (isBlank(courseId)) return bad(resp, "Missing courseId");
 
-	private Object mapCourseDurations(List<Object[]> rows) {
-		// returns shape: { durations: [...] } (matches your current response)
-		List<Map<String, Object>> list = new ArrayList<>();
+        fileName = trunc(fileName, 512);
+        fileType = trunc(fileType, 50);
 
-		for (Object[] r : rows) {
-			// Columns from new SP select:
-			// 0 durationId
-			// 1 userId
-			// 2 courseId
-			// 3 fileName
-			// 4 fileType
-			// 5 duration
-			// 6 totalSeconds
-			// 7 lastLocation
-			// 8 status
-			// 9 scoreRaw
-			// 10 scoreScaled
-			// 11 suspendData
-			// 12 lastSessionUid
-			// 13 updatedOn
+        List<Object[]> rows = em.createNamedStoredProcedureQuery("academic_course_routines")
+                .setParameter("actionType", "getCourseDurations")
+                .setParameter("actionValue", buildGetSet(userId, courseId, fileName, fileType))
+                .getResultList();
 
-			Map<String, Object> m = new LinkedHashMap<>();
-			m.put("durationId",  toLong(r, 0));
-			m.put("userId",      toStr(r, 1));
-			m.put("courseId",    toStr(r, 2));
-			m.put("fileName",    toStr(r, 3));
-			m.put("fileType",    toStr(r, 4));
-			m.put("duration",    toBig(r, 5));         // percent 0..100
-			m.put("totalSeconds",toLong(r, 6));
-			m.put("lastLocation",toStr(r, 7));         // resume key
-			m.put("status",      toStr(r, 8));
-			m.put("scoreRaw",    toBig(r, 9));
-			m.put("scoreScaled", toBig(r,10));
-			m.put("suspendData", toStr(r,11));         // resume payload
-			m.put("sessionUid",  toStr(r,12));
-			m.put("updatedOn",   toTs(r,13));
+        resp.setBody(mapCourseDurations(rows));
+        resp.setCode("Success");
+        resp.setMessage("Fetched durations");
+        return new ResponseEntity<>(resp, HttpStatus.OK);
 
-			list.add(m);
-		}
+    } catch (Exception e) {
+        logger.error("Error in getCourseDurations: ", e);
+        resp.setCode("Failed");
+        resp.setMessage("Failed to fetch durations");
+        return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
 
-		Map<String, Object> out = new HashMap<>();
-		out.put("durations", list);
-		return out;
-	}
+/* =========================
+   UPDATED mapper (matches new SELECT order)
+========================= */
+private Object mapCourseDurations(List<Object[]> rows) {
+    List<Map<String, Object>> list = new ArrayList<>();
 
-	private String resolveErrorMsg(Exception e) {
-		try {
-			if (serverDao != null) {
-				String[] err = serverDao.errorProcedureCall(e);
-				if (err != null && err.length > 1 && !isBlank(err[1])) return err[1];
-			}
-		} catch (Exception ignore) {}
-		return "Oops! Something went wrong";
-	}
+    for (Object[] r : rows) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("durationId",         toLong(r, 0));
+        m.put("userId",             toStr(r, 1));
+        m.put("courseId",           toStr(r, 2));
+        m.put("fileName",           toStr(r, 3));
+        m.put("fileType",           toStr(r, 4));
+        m.put("duration",           toBig(r, 5));
 
-	private ResponseEntity<JsonResponse<Object>> bad(JsonResponse<Object> resp, String msg) {
-		resp.setCode("Failed");
-		resp.setMessage(msg);
-		resp.setBody(null);
-		return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-	}
+        m.put("totalSeconds",       toLong(r, 6));  // accumulated
+        m.put("lastPositionSeconds",toLong(r, 7));  // NEW: resume position
+        m.put("fileTotalSeconds",   toLong(r, 8));  // NEW: media duration
 
-	private static boolean isBlank(String s) {
-		return s == null || s.trim().isEmpty();
-	}
+        m.put("lastLocation",       toStr(r, 9));
+        m.put("status",             toStr(r,10));
+        m.put("scoreRaw",           toBig(r,11));
+        m.put("scoreScaled",        toBig(r,12));
+        m.put("suspendData",        toStr(r,13));
+        m.put("sessionUid",         toStr(r,14));
+        m.put("updatedOn",          toTs(r,15));
+        list.add(m);
+    }
 
-	private static String nullIfBlank(String s) {
-		return isBlank(s) ? "" : s;
-	}
+    Map<String, Object> out = new HashMap<>();
+    out.put("durations", list);
+    return out;
+}
 
-	private static String trunc(String s, int max) {
-		if (s == null) return "";
-		if (s.length() <= max) return s;
-		return s.substring(0, max);
-	}
+    /* =========================
+       Helpers
+    ========================= */
 
-	private static String esc(String s) {
-		if (s == null) return "";
-		return s.replace("\\", "\\\\").replace("'", "''");
-	}
+    private String buildGetSet(String userId, String courseId, String fileName, String fileType) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SET @p_userId='").append(esc(userId)).append("', ");
+        sb.append("@p_courseId='").append(esc(courseId)).append("'");
 
-	private static Long parseLongSafe(String s, Long def) {
-		try {
-			if (isBlank(s)) return def;
-			String t = s.trim();
-			if (!t.matches("^-?\\d+$")) return def;
-			return Long.parseLong(t);
-		} catch (Exception e) {
-			return def;
-		}
-	}
+        if (!isBlank(fileName)) sb.append(", @p_fileName='").append(esc(fileName)).append("'");
+        if (!isBlank(fileType)) sb.append(", @p_fileType='").append(esc(fileType)).append("'");
 
-	private static String toStr(Object[] r, int idx) {
-		Object v = (r != null && idx < r.length) ? r[idx] : null;
-		return v == null ? "" : String.valueOf(v);
-	}
-
-	private static Long toLong(Object[] r, int idx) {
-		Object v = (r != null && idx < r.length) ? r[idx] : null;
-		if (v == null) return 0L;
-		if (v instanceof Number) return ((Number) v).longValue();
-		try { return Long.parseLong(String.valueOf(v)); } catch (Exception e) { return 0L; }
-	}
-
-	private static BigDecimal toBig(Object[] r, int idx) {
-		Object v = (r != null && idx < r.length) ? r[idx] : null;
-		if (v == null) return null;
-		if (v instanceof BigDecimal) return (BigDecimal) v;
-		if (v instanceof Number) return new BigDecimal(((Number) v).toString());
-		try { return new BigDecimal(String.valueOf(v)); } catch (Exception e) { return null; }
-	}
-
-	private static String toTs(Object[] r, int idx) {
-		Object v = (r != null && idx < r.length) ? r[idx] : null;
-		if (v == null) return "";
-		if (v instanceof Timestamp) return v.toString();
-		return String.valueOf(v);
-	}
+        sb.append(";");
+        return sb.toString();
+    }
 
 
+    private String resolveErrorMsg(Exception e) {
+        try {
+            if (serverDao != null) {
+                String[] err = serverDao.errorProcedureCall(e);
+                if (err != null && err.length > 1 && !isBlank(err[1])) return err[1];
+            }
+        } catch (Exception ignore) {}
+        return "Oops! Something went wrong";
+    }
 
+    private ResponseEntity<JsonResponse<Object>> bad(JsonResponse<Object> resp, String msg) {
+        resp.setCode("Failed");
+        resp.setMessage(msg);
+        resp.setBody(null);
+        return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+    }
 
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
 
+    private static String nullIfBlank(String s) {
+        return isBlank(s) ? "" : s.trim();
+    }
 
+    private static String trunc(String s, int max) {
+        if (s == null) return "";
+        String t = s.trim();
+        return (t.length() <= max) ? t : t.substring(0, max);
+    }
 
+    private static String esc(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("'", "''");
+    }
+
+    private static Long parseLongSafe(String s, Long def) {
+        try {
+            if (isBlank(s)) return def;
+            String t = s.trim();
+            if (!t.matches("^-?\\d+$")) return def;
+            return Long.parseLong(t);
+        } catch (Exception e) {
+            return def;
+        }
+    }
+
+    private static String toStr(Object[] r, int idx) {
+        Object v = (r != null && idx < r.length) ? r[idx] : null;
+        return v == null ? "" : String.valueOf(v);
+    }
+
+    private static Long toLong(Object[] r, int idx) {
+        Object v = (r != null && idx < r.length) ? r[idx] : null;
+        if (v == null) return 0L;
+        if (v instanceof Number) return ((Number) v).longValue();
+        try { return Long.parseLong(String.valueOf(v)); } catch (Exception e) { return 0L; }
+    }
+
+    private static BigDecimal toBig(Object[] r, int idx) {
+        Object v = (r != null && idx < r.length) ? r[idx] : null;
+        if (v == null) return null;
+        if (v instanceof BigDecimal) return (BigDecimal) v;
+        if (v instanceof Number) return new BigDecimal(((Number) v).toString());
+        try { return new BigDecimal(String.valueOf(v)); } catch (Exception e) { return null; }
+    }
+
+    private static String toTs(Object[] r, int idx) {
+        Object v = (r != null && idx < r.length) ? r[idx] : null;
+        if (v == null) return "";
+        if (v instanceof Timestamp) return v.toString();
+        return String.valueOf(v);
+    }
 
 
 

@@ -1,6 +1,7 @@
 package nirmalya.aatithya.restmodule.lms.controller;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
 import nirmalya.aatithya.restmodule.lms.dao.AcademicCourseDao;
+import nirmalya.aatithya.restmodule.lms.dao.CourseProgressDao;
 
 @RestController
 @RequestMapping(value = "his/")
@@ -250,35 +252,37 @@ public class RestAcademicCourseController {
 	
 	
 
-	// ✅ Keep SAME endpoint (your Next.js already calls this)
+	// AcademicCourseController.java (snippet)
 	@PostMapping(value = "rest-academic-course-duration-add")
 	public ResponseEntity<JsonResponse<Object>> saveCourseDuration(
 			@RequestBody String data,
 			@RequestParam String userId,
-			@RequestParam String org,
-			@RequestParam String orgDiv,
+			@RequestParam(required = false) String org,
+			@RequestParam(required = false) String orgDiv,
 			HttpServletRequest request) {
-
+	
 		logger.info("Method : saveCourseDuration starts");
-		ResponseEntity<JsonResponse<Object>> resp = academicCourseDao.saveCourseDuration(data, userId, org, orgDiv);
+		ResponseEntity<JsonResponse<Object>> resp =
+				academicCourseDao.saveCourseDuration(data, userId, org, orgDiv);
 		logger.info("Method : saveCourseDuration ends");
 		return resp;
 	}
+	
 
-	// ✅ GET endpoint used by Next.js /api/lms/course-durations
-	// ✅ Backward compatible: fileName/fileType are OPTIONAL
-	@GetMapping(value = "rest-academic-course-duration-get")
-	public ResponseEntity<JsonResponse<Object>> getCourseDurations(
-			@RequestParam String userId,
-			@RequestParam String courseId,
-			@RequestParam(required = false) String fileName,
-			@RequestParam(required = false) String fileType) {
+@GetMapping(value = "rest-academic-course-duration-get")
+public ResponseEntity<JsonResponse<Object>> getCourseDurations(
+        @RequestParam String userId,
+        @RequestParam String courseId,
+        @RequestParam(required = false) String fileName,
+        @RequestParam(required = false) String fileType) {
 
-		logger.info("Method : getCourseDurations starts");
-		ResponseEntity<JsonResponse<Object>> resp = academicCourseDao.getCourseDurations(userId, courseId, fileName, fileType);
-		logger.info("Method : getCourseDurations ends");
-		return resp;
-	}
+    logger.info("Method : getCourseDurations starts");
+    ResponseEntity<JsonResponse<Object>> resp =
+            academicCourseDao.getCourseDurations(userId, courseId, fileName, fileType);
+    logger.info("Method : getCourseDurations ends");
+    return resp;
+}
+
 
 	@RequestMapping(value = "rest-getadminAllHeadCount", method = { RequestMethod.GET })
 	public JsonResponse<Object> getadminAllHeadCount(@RequestParam String orgName ,@RequestParam String orgDivision,@RequestParam String userId) {
@@ -401,7 +405,84 @@ public class RestAcademicCourseController {
 	}
 
 
+@Autowired
+	CourseProgressDao courseProgressDao;
 
+	/**
+	 * Save progress (video/pdf/ppt/scorm) for cross-device resume.
+	 *
+	 * POST /master/rest-course-progress-save?userId=..&org=..&orgDiv=..
+	 * Body JSON:
+	 * {
+	 *   "courseId":"COURSE001",
+	 *   "contentKey":"lesson1.mp4",
+	 *   "fileName":"lesson1.mp4",
+	 *   "fileType":"video",
+	 *   "status":"incomplete",
+	 *   "progressPercent":20,
+	 *   "currentSeconds":120,
+	 *   "totalSeconds":600,
+	 *   "location":"00:02:00",
+	 *   "runtimeState":"{...}",     // SCORM JSON string
+	 *   "runtimeVer":1,
+	 *   "eventType":"PROGRESS",
+	 *   "eventTs":"2025-12-25T20:10:30.123Z",
+	 *   "sessionUid":"S_xxx",
+	 *   "deviceId":"WEB_CHROME"
+	 * }
+	 */
+	@PostMapping(value = "/rest-course-progress-save")
+	public ResponseEntity<JsonResponse<Object>> saveProgress(
+			@RequestBody String payload,
+			@RequestParam String userId,
+			@RequestParam String org,
+			@RequestParam String orgDiv) {
+
+		return courseProgressDao.saveProgress(payload, userId, org, orgDiv);
+	}
+
+
+	
+	/**
+	 * GET all progress rows for a course
+	 * GET /master/rest-course-progress-map?userId=..&courseId=..
+	 */
+	@GetMapping(value = "rest-course-progress-map")
+	public ResponseEntity<JsonResponse<Object>> getCourseProgressMap(
+			@RequestParam String userId,
+			@RequestParam String courseId) {
+				logger.info("rest-course-progress-map"+userId);
+
+		return courseProgressDao.getCourseProgressMap(userId, courseId);
+	}
+
+	/**
+	 * GET resume for one content
+	 * GET /master/rest-course-progress-resume?userId=..&courseId=..&contentKey=..
+	 */
+	@GetMapping(value = "/rest-course-progress-resume")
+	public ResponseEntity<JsonResponse<Object>> getContentResume(
+			@RequestParam String userId,
+			@RequestParam String courseId,
+			@RequestParam String contentKey) {
+
+		return courseProgressDao.getContentResume(userId, courseId, contentKey);
+	}
+
+	/**
+	 * Reset one content progress
+	 * POST /master/rest-course-progress-reset?userId=..&org=..&orgDiv=..
+	 * Body JSON: { "courseId":"..", "contentKey":"..", "fileType":"scorm", "sessionUid":"..", "deviceId":".." }
+	 */
+	@PostMapping(value = "/rest-course-progress-reset")
+	public ResponseEntity<JsonResponse<Object>> resetContentProgress(
+			@RequestBody String payload,
+			@RequestParam String userId,
+			@RequestParam String org,
+			@RequestParam String orgDiv) {
+
+		return courseProgressDao.resetContentProgress(payload, userId, org, orgDiv);
+	}
 
 
 }
