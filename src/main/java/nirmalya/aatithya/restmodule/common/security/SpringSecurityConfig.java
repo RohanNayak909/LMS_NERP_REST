@@ -276,6 +276,9 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
 			  .antMatchers("/his/rest-course-progress-reset").permitAll()
 
+			  .antMatchers("/his/rest-getAllCourseDetailsWithTrainingsNoDocs").permitAll()
+
+
 			  .antMatchers("/otp/request").permitAll()
 
 			  .antMatchers("/otp/verify").permitAll()

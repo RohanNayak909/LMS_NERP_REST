@@ -1917,6 +1917,73 @@ private Object mapCourseDurations(List<Object[]> rows) {
 
 
 
+	@SuppressWarnings("unchecked")
+public JsonResponse<Object> getAllCourseDetailsWithTrainingsNoDocs(
+        String orgName,
+        String orgDivision,
+        String categoryId,
+        String subCategoryId,
+        String search
+) {
+    logger.info("Method : getAllCourseDetailsWithTrainingsNoDocs Dao starts");
+
+    JsonResponse<Object> resp = new JsonResponse<>();
+
+    try {
+        // Build actionValue like: SET @p_categoryId='..', @p_subCategoryId='..', @p_search='..';
+        StringBuilder sb = new StringBuilder();
+        boolean hasAny = false;
+
+        sb.append("SET ");
+
+        if (categoryId != null && !categoryId.trim().isEmpty()) {
+            sb.append("@p_categoryId='").append(esc(categoryId)).append("',");
+            hasAny = true;
+        }
+        if (subCategoryId != null && !subCategoryId.trim().isEmpty()) {
+            sb.append("@p_subCategoryId='").append(esc(subCategoryId)).append("',");
+            hasAny = true;
+        }
+        if (search != null && !search.trim().isEmpty()) {
+            sb.append("@p_search='").append(esc(search)).append("',");
+            hasAny = true;
+        }
+
+        // If nothing passed, send empty string so SP skips PREPARE block
+        String value = "";
+        if (hasAny) {
+            value = sb.substring(0, sb.length() - 1) + ";"; // remove last comma
+        }
+
+        logger.info("SP actionValue: {}", value);
+
+        List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
+                .setParameter("actionType", "getAllCourseDetailsWithTrainingsNoDocs")
+                .setParameter("actionValue", value)
+                .getResultList();
+
+        // Your SP returns 1 row / 1 column JSON_OBJECT → JPA gives Object[] with [0]=jsonString
+        if (x != null && !x.isEmpty()) {
+            resp.setBody(x.get(0)); // keep SAME pattern as your other methods
+        } else {
+            resp.setBody(new Object[] { "{\"productDetails\":[]}" });
+        }
+
+        resp.setCode("success");
+        resp.setMessage("Data fetched successfully");
+
+    } catch (Exception e) {
+        logger.error("Error in getAllCourseDetailsWithTrainingsNoDocs DAO:", e);
+        resp.setCode("failed");
+        resp.setMessage(e.getMessage());
+    }
+
+    logger.info("Method : getAllCourseDetailsWithTrainingsNoDocs Dao ends");
+    return resp;
+}
+
+
+
 
 
 
