@@ -3,7 +3,9 @@ package nirmalya.aatithya.restmodule.common.utils;
 import java.util.List;
 
 import nirmalya.aatithya.restmodule.pipeline.model.RestCrmQuoteModel;
-  
+import nirmalya.aatithya.restmodule.procurment.model.InventoryRequisitionModel;
+import nirmalya.aatithya.restmodule.sales.model.RestQuotationNewModel;
+
 public class GenerateCRMQuoteParameter {
 
 	public static String getAddParam(List<RestCrmQuoteModel> customer) {

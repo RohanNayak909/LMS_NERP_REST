@@ -177,11 +177,11 @@ public class RestCrmLeadsController {
 	 */
 	@GetMapping(value = "rest-viewLeadDet")
 	public JsonResponse viewLeadDet(@RequestParam String pageno, @RequestParam String userId,
-			@RequestParam String orgName, @RequestParam String orgDivision) {
+			@RequestParam String orgName, @RequestParam String orgDivision,@RequestParam String fromDate,@RequestParam String toDate) {
 		logger.info("Method :viewLeadDet starts");
 
 		logger.info("Method :viewLeadDet ends");
-		return restCrmLeadsDao.viewLeadDet(pageno, userId, orgName, orgDivision);
+		return restCrmLeadsDao.viewLeadDet(pageno, userId, orgName, orgDivision,fromDate,toDate);
 	}
 
 	/* Duplicate check leaad phone and mobile */
