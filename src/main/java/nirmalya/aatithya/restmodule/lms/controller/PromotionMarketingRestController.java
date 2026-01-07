@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
+import nirmalya.aatithya.restmodule.lms.dao.AcademicCourseDao;
 import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 
 	@RestController
@@ -28,7 +29,8 @@ import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 
 		@Autowired
 		PromotionMarketingRestDao promotionMarketingRestDao;
-	
+	@Autowired
+	AcademicCourseDao academicCourseDao;
 	
 	
 // View
@@ -153,6 +155,27 @@ import nirmalya.aatithya.restmodule.lms.dao.PromotionMarketingRestDao;
 			logger.info("Method :viewCourse endss");
 			return promotionMarketingRestDao.viewCourse(orgName, orgDivision,id);
 		}
+
+
+		@RequestMapping(value = "rest-getAllCourseDetailsWithTrainingsNoDocs", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllCourseDetailsWithTrainingsNoDocs(
+			@RequestParam String orgName,
+			@RequestParam String orgDivision,
+			@RequestParam(required = false) String categoryId,
+			@RequestParam(required = false) String subCategoryId,
+			@RequestParam(required = false) String search
+	) {
+		logger.info("Method : getAllCourseDetailsWithTrainingsNoDocs start");
+		logger.info("Filters => categoryId={}, subCategoryId={}, search={}", categoryId, subCategoryId, search);
+	
+		JsonResponse<Object> resp =
+				academicCourseDao.getAllCourseDetailsWithTrainingsNoDocs(
+						orgName, orgDivision, categoryId, subCategoryId, search
+				);
+	
+		logger.info("Method : getAllCourseDetailsWithTrainingsNoDocs end");
+		return resp;
+	}
 		
 }
 

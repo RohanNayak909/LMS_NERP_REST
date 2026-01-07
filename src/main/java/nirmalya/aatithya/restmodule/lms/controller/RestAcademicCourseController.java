@@ -471,4 +471,25 @@ public ResponseEntity<JsonResponse<Object>> getCourseDurations(
 	}
   
 
+
+	@RequestMapping(value = "rest-getAllCourseDetailsWithTrainingsNoDocs", method = { RequestMethod.GET })
+	public JsonResponse<Object> getAllCourseDetailsWithTrainingsNoDocs(
+			@RequestParam String orgName,
+			@RequestParam String orgDivision,
+			@RequestParam(required = false) String categoryId,
+			@RequestParam(required = false) String subCategoryId,
+			@RequestParam(required = false) String search
+	) {
+		logger.info("Method : getAllCourseDetailsWithTrainingsNoDocs start");
+		logger.info("Filters => categoryId={}, subCategoryId={}, search={}", categoryId, subCategoryId, search);
+	
+		JsonResponse<Object> resp =
+				academicCourseDao.getAllCourseDetailsWithTrainingsNoDocs(
+						orgName, orgDivision, categoryId, subCategoryId, search
+				);
+	
+		logger.info("Method : getAllCourseDetailsWithTrainingsNoDocs end");
+		return resp;
+	}
+
 }
