@@ -38,6 +38,17 @@ public class MasterDataApiRestController {
 			return masterdao.getOwnerList(userId,org,orgDiv);
 		}
 		
+		@RequestMapping(value = "getOwnerListDash", method = { RequestMethod.GET })
+		public List<DropDownModel> getOwnerListDash(@RequestParam String userId,String org,String orgDiv) {
+			
+			logger.info("Method : getOwnerListDash starts" + userId);
+			logger.info("Method : getOwnerListDash ends");
+			
+			
+			return masterdao.getOwnerListDash(userId,org,orgDiv);
+		}
+		
+		
 		@RequestMapping(value = "getCrmTaskStatus", method = { RequestMethod.GET })
 		public List<DropDownModel> getCrmTaskStatus() {
 			

@@ -89,6 +89,7 @@ public class CustomerNewDao {
 		try {
 		
 			String values = GenerateCustomerNewParameter.getAddCustParam(restCustoomerNewModel);
+			logger.info(values);
 			if (restCustoomerNewModel.getCustomerId() == "" || restCustoomerNewModel.getCustomerId() == null) {
 				
 				List<Object[]> x = em.createNamedStoredProcedureQuery("customermaster")
