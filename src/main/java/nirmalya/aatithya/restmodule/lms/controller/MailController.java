@@ -1,49 +1,100 @@
 package nirmalya.aatithya.restmodule.lms.controller;
 
-import nirmalya.aatithya.restmodule.mailservice.EmailService;
+import nirmalya.aatithya.restmodule.mailservice.GraphEmailService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
-import java.util.List;
-import java.util.Map;
+import javax.validation.constraints.NotNull;
+import java.util.*;
 
 @RestController
 @RequestMapping("/master/mail")
 public class MailController {
-  private final EmailService emailService;
-  public MailController(EmailService emailService) { this.emailService = emailService; }
 
+  private final GraphEmailService graphEmailService;
+
+  public MailController(GraphEmailService graphEmailService) {
+    this.graphEmailService = graphEmailService;
+  }
+
+  /**
+   * Graph DIRECT send (NO DB enqueue, NO scheduler involvement)
+   */
   @PostMapping("/send")
   public Map<String, Object> send(@Valid @RequestBody SendMailRequest req) {
-    long id = emailService.enqueue(
-        req.getTemplateCode(), req.getLocale(), req.getVersion(),
-        req.getTo().getEmail(), req.getTo().getName(), req.getPayload());
-    return java.util.Collections.unmodifiableMap(new java.util.HashMap<String,Object>() {{
-      put("status","OK"); put("message","Queued"); put("id", id);
-    }});
+
+    graphEmailService.sendTemplateNow(
+        req.getTemplateCode(),
+        req.getLocale(),
+        req.getVersion(),
+        req.getTo().getEmail(),
+        req.getTo().getName(),
+        req.getPayload()
+    );
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("status", "OK");
+    out.put("message", "Sent via Graph (direct)");
+    out.put("queued", Boolean.FALSE);
+    return Collections.unmodifiableMap(out);
   }
 
+  /**
+   * Graph DIRECT bulk send (NO enqueue). Continues sending even if some items fail.
+   * Returns PARTIAL if any failed.
+   */
   @PostMapping("/send-bulk")
   public Map<String, Object> sendBulk(@Valid @RequestBody BulkSendMailRequest req) {
-    int n = 0;
-    for (SendMailRequest it : req.getItems()) {
-      emailService.enqueue(
-          it.getTemplateCode(), it.getLocale(), it.getVersion(),
-          it.getTo().getEmail(), it.getTo().getName(), it.getPayload());
-      n++;
+
+    int sent = 0;
+    List<Map<String, Object>> errors = new ArrayList<>();
+
+    List<SendMailRequest> items = req.getItems();
+    for (int i = 0; i < items.size(); i++) {
+      SendMailRequest it = items.get(i);
+      try {
+        graphEmailService.sendTemplateNow(
+            it.getTemplateCode(),
+            it.getLocale(),
+            it.getVersion(),
+            it.getTo().getEmail(),
+            it.getTo().getName(),
+            it.getPayload()
+        );
+        sent++;
+      } catch (Exception ex) {
+        Map<String, Object> err = new LinkedHashMap<>();
+        err.put("index", i);
+        err.put("templateCode", safe(it.getTemplateCode()));
+        err.put("toEmail", it.getTo() == null ? null : safe(it.getTo().getEmail()));
+        err.put("error", ex.getMessage());
+        errors.add(err);
+      }
     }
-    final int queued = n;
-    final String batch = req.getBatchCode();
-    return java.util.Collections.unmodifiableMap(new java.util.HashMap<String,Object>() {{
-      put("status","OK"); put("queued", queued); put("batchCode", batch);
-    }});
+
+    Map<String, Object> out = new LinkedHashMap<>();
+    out.put("status", errors.isEmpty() ? "OK" : "PARTIAL");
+    out.put("batchCode", req.getBatchCode());
+    out.put("sent", sent);
+    out.put("failed", errors.size());
+    out.put("queued", Boolean.FALSE);
+    if (!errors.isEmpty()) out.put("errors", errors);
+
+    return Collections.unmodifiableMap(out);
   }
 
+  /**
+   * Preview uses the SAME template rendering logic (TemplateUtil) via GraphEmailService.preview(...)
+   */
   @PostMapping("/preview")
   public Map<String, String> preview(@Valid @RequestBody PreviewRequest req) {
-    return emailService.preview(req.getTemplateCode(), req.getLocale(), req.getVersion(), req.getPayload());
+    return graphEmailService.preview(req.getTemplateCode(), req.getLocale(), req.getVersion(), req.getPayload());
+  }
+
+  private static String safe(String s) {
+    return s == null ? null : s.trim();
   }
 
   /* ---------- DTOs ---------- */
@@ -51,7 +102,8 @@ public class MailController {
     @NotBlank private String templateCode;
     private String locale;
     private Integer version;
-    @Valid private Recipient to;
+
+    @NotNull @Valid private Recipient to;
     private Map<String,Object> payload;
 
     public String getTemplateCode() { return templateCode; }
@@ -68,6 +120,7 @@ public class MailController {
     public static class Recipient {
       @Email @NotBlank private String email;
       private String name;
+
       public String getEmail() { return email; }
       public void setEmail(String email) { this.email = email; }
       public String getName() { return name; }
@@ -77,7 +130,8 @@ public class MailController {
 
   public static class BulkSendMailRequest {
     @NotBlank private String batchCode;
-    @Valid private List<SendMailRequest> items;
+    @NotNull @Valid private List<SendMailRequest> items;
+
     public String getBatchCode() { return batchCode; }
     public void setBatchCode(String batchCode) { this.batchCode = batchCode; }
     public List<SendMailRequest> getItems() { return items; }
@@ -89,6 +143,7 @@ public class MailController {
     private String locale;
     private Integer version;
     private Map<String,Object> payload;
+
     public String getTemplateCode() { return templateCode; }
     public void setTemplateCode(String templateCode) { this.templateCode = templateCode; }
     public String getLocale() { return locale; }

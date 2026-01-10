@@ -1,7 +1,7 @@
 package nirmalya.aatithya.restmodule.lms.controller;
 
 import nirmalya.aatithya.restmodule.lms.dao.OtpDao;
-import nirmalya.aatithya.restmodule.mailservice.EmailService;
+import nirmalya.aatithya.restmodule.mailservice.GraphEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +21,7 @@ public class OtpController {
   private static final Logger logger = LoggerFactory.getLogger(OtpController.class);
 
   private final OtpDao dao;
-  private final EmailService emailService;
+  private final GraphEmailService graphEmailService;
 
   @Value("${app.otp.ttlMinutes:10}")
   private int ttlMinutes;
@@ -32,9 +32,9 @@ public class OtpController {
   @Value("${app.org.name:Nirmalya Labs Private Limited}")
   private String orgName;
 
-  public OtpController(OtpDao dao, EmailService emailService) {
+  public OtpController(OtpDao dao, GraphEmailService graphEmailService) {
     this.dao = dao;
-    this.emailService = emailService;
+    this.graphEmailService = graphEmailService;
   }
 
   public static class OtpRequestPayload {
@@ -72,7 +72,8 @@ public class OtpController {
       payload.put("minutes", ttlMinutes);
       payload.put("orgName", orgName);
 
-      emailService.enqueue(
+      // ✅ Send immediately via Microsoft Graph (no SMTP / no queue)
+      graphEmailService.sendTemplateNow(
           "SIGNUP_OTP",
           "en-IN",
           1,
@@ -85,7 +86,7 @@ public class OtpController {
       resp.put("requestId", res.requestId);
       resp.put("ttlMinutes", ttlMinutes);
 
-      logger.info("OTP successfully generated for email={} (requestId={})", body.email, res.requestId);
+      logger.info("OTP successfully generated & sent via Graph for email={} (requestId={})", body.email, res.requestId);
     } catch (Exception e) {
       logger.error("Error while processing OTP request for email={}: {}", body.email, e.getMessage(), e);
       resp.put("ok", Boolean.FALSE);
