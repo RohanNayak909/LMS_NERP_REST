@@ -43,7 +43,6 @@ public class MasterDataApiDao {
 
 		List<DropDownModel> ownerList = new ArrayList<DropDownModel>();
 		String value = "SET @p_userId='" + userId + "', @p_org='" + org + "', @p_orgDiv='" + orgDiv + "';";
-		System.out.println("values-->" + value);
 		try {
 			List<Object[]> x = em.createNamedStoredProcedureQuery("crm_contact")
 					.setParameter("actionType", "getOwnerList").setParameter("actionValue", value).getResultList();
@@ -61,6 +60,36 @@ public class MasterDataApiDao {
 		}
 
 		logger.info("Method : getOwnerList ends" + ownerList);
+
+		return ownerList;
+	}
+	
+	//getOwnerListDashboard
+	@SuppressWarnings("unchecked")
+	public List<DropDownModel> getOwnerListDash(String userId,String org,String orgDiv) {
+
+		logger.info("Method : getOwnerListDash starts");
+
+		List<DropDownModel> ownerList = new ArrayList<DropDownModel>();
+		String value = "SET @p_userId='" + userId + "', @p_org='" + org + "', @p_orgDiv='" + orgDiv + "';";
+		System.out.println("getOwnerListDashboard values----------->" + value);
+		try {
+			List<Object[]> x = em.createNamedStoredProcedureQuery("CRM_DashBoardRoutines")
+					.setParameter("actionType", "getOwnerListDash").setParameter("actionValue", value).getResultList();
+
+			for (Object[] m : x) {
+				if (m[2] == null) {
+					m[2] = "";
+				}
+				DropDownModel dropDownModel = new DropDownModel(m[0], m[1], m[2]);
+				ownerList.add(dropDownModel);
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		logger.info("Method : getOwnerListDash ends" + ownerList);
 
 		return ownerList;
 	}

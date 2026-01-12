@@ -874,11 +874,11 @@ public class AcademicCourseDao {
 		JsonResponse<Object> resp = new JsonResponse<Object>();
 
 		try {
-			String value = "SET @p_courseId='" + Id + "';";
+			String value = "SET @p_userId='" + Id + "';";
 
 			logger.info("vvvv" + value);
 			List<Object[]> x = em.createNamedStoredProcedureQuery("academic_course_routines")
-					.setParameter("actionType", "editCourseTrainingDetails").setParameter("actionValue", value).getResultList();
+					.setParameter("actionType", "getAllUserTraining").setParameter("actionValue", value).getResultList();
 			resp.setBody(x.get(0));
 			resp.setCode("success");
 			resp.setMessage("Data Fetched successfully");

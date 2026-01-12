@@ -190,6 +190,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 				@StoredProcedureParameter(mode = ParameterMode.IN, name = "actionValue", type = String.class) }
 
 		),
+		
+		@NamedStoredProcedureQuery(name = "checkDuplicateData", procedureName = "checkDuplicateData", parameters = {
+				@StoredProcedureParameter(mode = ParameterMode.IN, name = "actionType", type = String.class),
+				@StoredProcedureParameter(mode = ParameterMode.IN, name = "actionValue", type = String.class) }),
 
 		@NamedStoredProcedureQuery(name = "crm_Client_Routines", procedureName = "crm_Client_Details", parameters = {
 				@StoredProcedureParameter(mode = ParameterMode.IN, name = "actionType", type = String.class),
