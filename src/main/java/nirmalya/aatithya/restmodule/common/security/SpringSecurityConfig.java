@@ -1,5 +1,6 @@
 package nirmalya.aatithya.restmodule.common.security;
 
+
 import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -200,6 +201,16 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
 
 
+				.antMatchers("/his/lms-getCountryList").permitAll()
+				.antMatchers("/his/lms-contactList").permitAll()
+
+
+				
+
+				
+
+				
+				
     // ---- add ALL exam routes here ----
         // list quizzes mapped to product, quiz headers
         .antMatchers("/master/rest-product-quizzes").permitAll()
@@ -256,6 +267,16 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 			  .antMatchers("/master/payment/retake/create").permitAll()
 
 			  .antMatchers("/master/payment/retake/confirm").permitAll()
+
+			  .antMatchers("/his/rest-course-progress-save").permitAll()
+
+			  .antMatchers("/his/rest-course-progress-map").permitAll()
+
+			  .antMatchers("/his/rest-course-progress-resume").permitAll()
+
+			  .antMatchers("/his/rest-course-progress-reset").permitAll()
+
+			  .antMatchers("/his/rest-getAllCourseDetailsWithTrainingsNoDocs").permitAll()
 
 
 			  .antMatchers("/otp/request").permitAll()
