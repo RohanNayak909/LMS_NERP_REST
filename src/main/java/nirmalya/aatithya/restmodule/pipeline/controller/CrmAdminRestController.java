@@ -48,6 +48,7 @@ public class CrmAdminRestController {
 
 		return crmAdminDao.allTask(org, orgDiv, role, userId);
 	}
+	
 
 	@RequestMapping(value = "user-tasks", method = { RequestMethod.GET })
 	public JsonResponse<Object> getUserTask(@RequestParam String userId, @RequestParam String type) {
