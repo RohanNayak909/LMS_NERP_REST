@@ -57,27 +57,56 @@ public class OtpController {
     return isBlank(name) ? "User" : name.trim();
   }
 
+  private static String normEmail(String s) {
+    return s == null ? "" : s.trim().toLowerCase();
+  }
+
+  private static String normPurpose(String s) {
+    String p = (s == null) ? "" : s.trim();
+    return p.isEmpty() ? "SIGNUP" : p.toUpperCase();
+  }
+
+  private static String resolveTemplateCode(String purposeUpper) {
+    // ✅ use your DB template codes
+    if ("FORGOT_PASSWORD".equals(purposeUpper)) return "FORGOT_PASSWORD_OTP";
+    if ("SIGNUP".equals(purposeUpper)) return "SIGNUP_OTP";
+
+    // fallback (safe)
+    return "SIGNUP_OTP";
+  }
+
   @PostMapping("/request")
   public Map<String, Object> request(@RequestBody OtpRequestPayload body, HttpServletRequest req) {
     final String ip = req != null ? req.getRemoteAddr() : "unknown";
-    logger.info("Received OTP request for email={} purpose={} from IP={}", body.email, body.purpose, ip);
+
+    final String email = normEmail(body.email);
+    final String purpose = normPurpose(body.purpose);
+    final String tplCode = resolveTemplateCode(purpose);
+
+    logger.info("OTP request email={} purpose={} template={} ip={}", email, purpose, tplCode, ip);
 
     Map<String, Object> resp = new HashMap<>();
     try {
-      final OtpDao.CreateResult res = dao.create(body.email, body.purpose, ttlMinutes, maxAttempts, ip);
+      final OtpDao.CreateResult res = dao.create(email, purpose, ttlMinutes, maxAttempts, ip);
 
       Map<String, Object> payload = new HashMap<>();
       payload.put("name", displayName(body.name));
       payload.put("otp", res.otpPlain);
-      payload.put("minutes", ttlMinutes);
-      payload.put("orgName", orgName);
 
-      // ✅ Send immediately via Microsoft Graph (no SMTP / no queue)
+      // ✅ provide all keys so template never breaks
+      payload.put("ttlMin", ttlMinutes);
+      payload.put("ttlMinutes", ttlMinutes);
+      payload.put("minutes", ttlMinutes);
+
+      payload.put("orgName", orgName);
+      payload.put("email", email);
+      payload.put("purpose", purpose);
+
       graphEmailService.sendTemplateNow(
-          "SIGNUP_OTP",
+          tplCode,
           "en-IN",
           1,
-          body.email,
+          email,
           displayName(body.name),
           payload
       );
@@ -86,9 +115,11 @@ public class OtpController {
       resp.put("requestId", res.requestId);
       resp.put("ttlMinutes", ttlMinutes);
 
-      logger.info("OTP successfully generated & sent via Graph for email={} (requestId={})", body.email, res.requestId);
+      logger.info("OTP generated & mailed email={} purpose={} template={} requestId={}",
+          email, purpose, tplCode, res.requestId);
+
     } catch (Exception e) {
-      logger.error("Error while processing OTP request for email={}: {}", body.email, e.getMessage(), e);
+      logger.error("OTP request failed email={} purpose={} err={}", email, purpose, e.getMessage(), e);
       resp.put("ok", Boolean.FALSE);
       resp.put("error", "Failed to generate OTP. Please try again later.");
     }
@@ -97,28 +128,28 @@ public class OtpController {
 
   @PostMapping("/verify")
   public Map<String, Object> verify(@RequestBody OtpVerifyPayload body) {
-    logger.info("Verifying OTP for email={} purpose={}", body.email, body.purpose);
-    Map<String, Object> resp = new HashMap<>();
+    final String email = normEmail(body.email);
+    final String purpose = normPurpose(body.purpose);
 
+    logger.info("OTP verify email={} purpose={}", email, purpose);
+
+    Map<String, Object> resp = new HashMap<>();
     try {
-      final Map<String, Object> r = dao.verify(body.email, body.purpose, body.otp);
+      final Map<String, Object> r = dao.verify(email, purpose, body.otp);
       final boolean ok = Boolean.TRUE.equals(r.get("ok"));
       final String message = String.valueOf(r.get("message"));
 
       resp.put("ok", ok);
       resp.put("message", message);
 
-      if (ok) {
-        logger.info("OTP verification successful for email={} purpose={}", body.email, body.purpose);
-      } else {
-        logger.warn("OTP verification failed for email={} purpose={} message={}", body.email, body.purpose, message);
-      }
+      if (ok) logger.info("OTP verified email={} purpose={}", email, purpose);
+      else logger.warn("OTP verify failed email={} purpose={} message={}", email, purpose, message);
+
     } catch (Exception e) {
-      logger.error("Error verifying OTP for email={}: {}", body.email, e.getMessage(), e);
+      logger.error("OTP verify error email={} purpose={} err={}", email, purpose, e.getMessage(), e);
       resp.put("ok", Boolean.FALSE);
       resp.put("message", "Error verifying OTP. Please try again.");
     }
-
     return resp;
   }
 }

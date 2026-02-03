@@ -25,7 +25,11 @@ public class GraphMailClient {
     this.tokenProvider = tokenProvider;
   }
 
-  public void sendMail(String toEmail, String toName, String subject, String html, String text) {
+  /**
+   * ccList supports comma/semicolon separated emails:
+   * "a@x.com,b@y.com" or "a@x.com; b@y.com"
+   */
+  public void sendMail(String toEmail, String toName, String ccList, String subject, String html, String text) {
     String senderUpn = must(env.getProperty("o365.graph.senderUpn"), "o365.graph.senderUpn");
     String token = tokenProvider.getAccessToken();
 
@@ -45,19 +49,21 @@ public class GraphMailClient {
     bodyObj.put("contentType", hasHtml ? "HTML" : "Text");
     bodyObj.put("content", bodyContent);
 
-    Map<String, Object> emailAddress = new HashMap<>();
-    emailAddress.put("address", toEmail);
-    if (toName != null && !toName.trim().isEmpty()) {
-      emailAddress.put("name", toName.trim());
-    }
+    // ---- TO recipient
+    Map<String, Object> toRecipient = wrapRecipient(toEmail, toName);
 
-    Map<String, Object> toRecipient = new HashMap<>();
-    toRecipient.put("emailAddress", emailAddress);
+    // ---- CC recipients (from template cc_list)
+    List<Map<String, Object>> ccRecipients = buildRecipientsFromList(ccList, toEmail);
 
     Map<String, Object> message = new HashMap<>();
     message.put("subject", safeSubject);
     message.put("body", bodyObj);
     message.put("toRecipients", Collections.singletonList(toRecipient));
+
+    // ✅ Only add ccRecipients when non-empty
+    if (!ccRecipients.isEmpty()) {
+      message.put("ccRecipients", ccRecipients);
+    }
 
     Map<String, Object> req = new HashMap<>();
     req.put("message", message);
@@ -79,13 +85,56 @@ public class GraphMailClient {
         throw new RuntimeException("Graph sendMail failed: " + resp.getStatusCode() + " body=" + resp.getBody());
       }
 
-      logger.info("Graph sendMail OK (status={}) sender={} saveToSentItems={}",
-          resp.getStatusCodeValue(), senderUpn, saveToSentItems);
+      logger.info("Graph sendMail OK (status={}) sender={} saveToSentItems={} ccCount={}",
+          resp.getStatusCodeValue(), senderUpn, saveToSentItems, ccRecipients.size());
 
     } catch (HttpStatusCodeException e) {
       throw new RuntimeException("Graph sendMail HTTP " + e.getStatusCode().value()
           + " body=" + e.getResponseBodyAsString(), e);
     }
+  }
+
+  private static Map<String, Object> wrapRecipient(String email, String name) {
+    Map<String, Object> emailAddress = new HashMap<>();
+    emailAddress.put("address", email);
+    if (name != null && !name.trim().isEmpty()) {
+      emailAddress.put("name", name.trim());
+    }
+    Map<String, Object> recipient = new HashMap<>();
+    recipient.put("emailAddress", emailAddress);
+    return recipient;
+  }
+
+  /**
+   * Splits ccList by comma/semicolon. Removes blanks and duplicates.
+   * Also removes CC entries equal to the TO email to avoid duplication.
+   */
+  private static List<Map<String, Object>> buildRecipientsFromList(String ccList, String toEmail) {
+    if (ccList == null) return Collections.emptyList();
+    String raw = ccList.trim();
+    if (raw.isEmpty()) return Collections.emptyList();
+
+    String toNorm = normEmail(toEmail);
+
+    Set<String> unique = new LinkedHashSet<>();
+    for (String part : raw.split("[,;]")) {
+      String e = normEmail(part);
+      if (e.isEmpty()) continue;
+      if (!toNorm.isEmpty() && e.equals(toNorm)) continue;
+      unique.add(e);
+    }
+
+    if (unique.isEmpty()) return Collections.emptyList();
+
+    List<Map<String, Object>> out = new ArrayList<>();
+    for (String e : unique) {
+      out.add(wrapRecipient(e, null));
+    }
+    return out;
+  }
+
+  private static String normEmail(String s) {
+    return s == null ? "" : s.trim().toLowerCase();
   }
 
   private static boolean bool(String v, boolean def) {

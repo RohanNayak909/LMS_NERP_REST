@@ -192,6 +192,226 @@ import org.json.JSONObject;
 	}
 
 	
+    
+    @SuppressWarnings("unchecked")
+    public JsonResponse<Object> resetPasswordLms(String data) {
+        logger.info("Method : resetPasswordLms Dao starts");
+
+        JsonResponse<Object> resp = new JsonResponse<>();
+
+        try {
+            JSONObject jsonObj = new JSONObject(data);
+
+            String email = esc(jsonObj.optString("email")).toLowerCase();
+            String newPassword = jsonObj.optString("newPassword");
+
+            if (email == null || email.trim().isEmpty()) {
+                resp.setCode("failed");
+                resp.setMessage("Email is required");
+                return resp;
+            }
+            if (newPassword == null || newPassword.trim().length() < 6) {
+                resp.setCode("failed");
+                resp.setMessage("Password must be at least 6 characters");
+                return resp;
+            }
+
+            String encodedPassword = passEncoder.encode(newPassword);
+
+            String value = "SET @p_userId='', @p_email='" + email + "', @p_encodedPassword='" + esc(encodedPassword) + "';";
+            List<Object[]> result = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+                    .setParameter("actionType", "updatePasswordLMS")
+                    .setParameter("actionValue", value)
+                    .getResultList();
+
+            String status = pickStatus(result);
+
+            if ("SUCCESS".equalsIgnoreCase(status)) {
+                resp.setCode("success");
+                resp.setMessage("Password reset successfully");
+                resp.setBody(result.get(0));
+            } else if ("USER_NOT_FOUND".equalsIgnoreCase(status)) {
+                resp.setCode("failed");
+                resp.setMessage("User not found");
+                resp.setBody(result.get(0));
+            } else {
+                resp.setCode("failed");
+                resp.setMessage("Reset password failed");
+                resp.setBody(result.isEmpty() ? null : result.get(0));
+            }
+
+        } catch (Exception e) {
+            logger.error("resetPasswordLms error: ", e);
+            resp.setCode("failed");
+            resp.setMessage(e.getMessage());
+        }
+
+        logger.info("Method : resetPasswordLms Dao ends");
+        return resp;
+    }
+
+    @SuppressWarnings("unchecked")
+    public JsonResponse<Object> changePasswordLms(String data) {
+        logger.info("Method : changePasswordLms Dao starts");
+
+        JsonResponse<Object> resp = new JsonResponse<>();
+
+        try {
+            JSONObject jsonObj = new JSONObject(data);
+
+            String userId = esc(jsonObj.optString("userId"));
+            String oldPassword = jsonObj.optString("oldPassword");
+            String newPassword = jsonObj.optString("newPassword");
+
+            if (userId == null || userId.trim().isEmpty()) {
+                resp.setCode("failed");
+                resp.setMessage("UserId is required");
+                return resp;
+            }
+            if (oldPassword == null || oldPassword.trim().isEmpty()) {
+                resp.setCode("failed");
+                resp.setMessage("Old password is required");
+                return resp;
+            }
+            if (newPassword == null || newPassword.trim().length() < 6) {
+                resp.setCode("failed");
+                resp.setMessage("New password must be at least 6 characters");
+                return resp;
+            }
+
+            // 1) get encoded password from userRoutines (same as your login does)
+            String valueLogin = "SET @p_userName='" + userId + "';";
+            List<Object[]> x = em.createNamedStoredProcedureQuery("userRoutines")
+                    .setParameter("actionType", "getByName")
+                    .setParameter("actionValue", valueLogin)
+                    .getResultList();
+
+            if (x == null || x.isEmpty()) {
+                resp.setCode("failed");
+                resp.setMessage("User not found");
+                return resp;
+            }
+
+            String encodedPassword = (x.get(0)[2] != null) ? x.get(0)[2].toString() : "";
+            if (!passEncoder.matches(oldPassword, encodedPassword)) {
+                resp.setCode("failed");
+                resp.setMessage("Old password incorrect");
+                return resp;
+            }
+
+            // 2) update password
+            String encodedNew = passEncoder.encode(newPassword);
+
+            String value = "SET @p_userId='" + userId + "', @p_email='', @p_encodedPassword='" + esc(encodedNew) + "';";
+            List<Object[]> result = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+                    .setParameter("actionType", "updatePasswordLMS")
+                    .setParameter("actionValue", value)
+                    .getResultList();
+
+            String status = pickStatus(result);
+
+            if ("SUCCESS".equalsIgnoreCase(status)) {
+                resp.setCode("success");
+                resp.setMessage("Password changed successfully");
+                resp.setBody(result.get(0));
+            } else if ("USER_NOT_FOUND".equalsIgnoreCase(status)) {
+                resp.setCode("failed");
+                resp.setMessage("User not found");
+                resp.setBody(result.get(0));
+            } else {
+                resp.setCode("failed");
+                resp.setMessage("Change password failed");
+                resp.setBody(result.isEmpty() ? null : result.get(0));
+            }
+
+        } catch (Exception e) {
+            logger.error("changePasswordLms error: ", e);
+            resp.setCode("failed");
+            resp.setMessage(e.getMessage());
+        }
+
+        logger.info("Method : changePasswordLms Dao ends");
+        return resp;
+    }
+
+    // @SuppressWarnings("unchecked")
+    // public JsonResponse<Object> updateProfileLms(String data) {
+    //     logger.info("Method : updateProfileLms Dao starts");
+
+    //     JsonResponse<Object> resp = new JsonResponse<>();
+
+    //     try {
+    //         JSONObject jsonObj = new JSONObject(data);
+
+    //         String userId = esc(jsonObj.optString("userId"));
+    //         String firstName = esc(jsonObj.optString("firstName"));
+    //         String lastName = esc(jsonObj.optString("lastName"));
+    //         String dob = esc(jsonObj.optString("dob")); // yyyy-mm-dd or blank
+    //         String nationality = esc(jsonObj.optString("nationality"));
+    //         String gender = esc(jsonObj.optString("gender"));
+    //         String phone = esc(jsonObj.optString("phone"));
+
+    //         if (userId == null || userId.trim().isEmpty()) {
+    //             resp.setCode("failed");
+    //             resp.setMessage("UserId is required");
+    //             return resp;
+    //         }
+
+    //         String value = "SET @p_userId='" + userId + "'," +
+    //                 " @p_firstName='" + firstName + "'," +
+    //                 " @p_lastName='" + lastName + "'," +
+    //                 " @p_dob='" + dob + "'," +
+    //                 " @p_nationality='" + nationality + "'," +
+    //                 " @p_gender='" + gender + "'," +
+    //                 " @p_phone='" + phone + "';";
+
+    //         List<Object[]> result = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+    //                 .setParameter("actionType", "updateProfileLMS")
+    //                 .setParameter("actionValue", value)
+    //                 .getResultList();
+
+    //         String status = pickStatus(result);
+
+    //         if ("SUCCESS".equalsIgnoreCase(status)) {
+    //             resp.setCode("success");
+    //             resp.setMessage("Profile updated successfully");
+    //             resp.setBody(result.get(0));
+    //         } else if ("USER_NOT_FOUND".equalsIgnoreCase(status)) {
+    //             resp.setCode("failed");
+    //             resp.setMessage("User not found");
+    //             resp.setBody(result.get(0));
+    //         } else {
+    //             resp.setCode("failed");
+    //             resp.setMessage("Profile update failed");
+    //             resp.setBody(result.isEmpty() ? null : result.get(0));
+    //         }
+
+    //     } catch (Exception e) {
+    //         logger.error("updateProfileLms error: ", e);
+    //         resp.setCode("failed");
+    //         resp.setMessage(e.getMessage());
+    //     }
+
+    //     logger.info("Method : updateProfileLms Dao ends");
+    //     return resp;
+    // }
+
+
+
+
+
+    private static String pickStatus(List<Object[]> result) {
+        if (result == null || result.isEmpty()) return "";
+        Object[] row = result.get(0);
+        if (row == null || row.length == 0 || row[0] == null) return "";
+        return row[0].toString();
+    }
+
+    private static String esc(String s) {
+        if (s == null) return "";
+        return s.replace("'", "''").trim();
+    }
+
 	
 // 	@SuppressWarnings("unchecked")
 // 	public JsonResponse<Object> saveEnrollmentData(String orgName, String orgDivision, String userId, String data) {
@@ -367,6 +587,125 @@ private String escapeSql(String s) {
     if (s == null) return "";
     return s.replace("'", "''");
 }
+
+
+
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> profileViewLms(String userId) {
+    logger.info("Method : profileViewLms Dao starts, userId=" + userId);
+
+    JsonResponse<Object> resp = new JsonResponse<>();
+
+    try {
+        String value = "SET @p_userId='" + escapeSql(userId) + "';";
+
+        // ✅ IMPORTANT: use List<?> (not List<Object[]>)
+        List<?> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+                .setParameter("actionType", "viewProfileLMS")
+                .setParameter("actionValue", value)
+                .getResultList();
+
+        if (x == null || x.isEmpty()) {
+            resp.setCode("success");
+            resp.setMessage("No profile found");
+            resp.setBody(null);
+            return resp;
+        }
+
+        Object row = x.get(0);
+
+        // ✅ unwrap safely:
+        // - if result is Object[] with 1 column, take first element
+        // - else if result is String/JSON, return directly
+        if (row instanceof Object[]) {
+            Object[] arr = (Object[]) row;
+            resp.setBody(arr.length > 0 ? arr[0] : null);
+        } else {
+            resp.setBody(row);
+        }
+
+        resp.setCode("success");
+        resp.setMessage("Profile fetched successfully");
+
+    } catch (Exception e) {
+        resp.setCode("failed");
+        resp.setMessage(e.getMessage());
+        logger.error("profileViewLms error:", e);
+    }
+
+    logger.info("Method : profileViewLms Dao ends");
+    return resp;
+}
+
+
+
+
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> updateProfileLms(String data) {
+    logger.info("Method : updateProfileLms Dao starts");
+
+    JsonResponse<Object> resp = new JsonResponse<>();
+
+    try {
+        org.json.JSONObject jsonObj = new org.json.JSONObject(data);
+
+        String userId = escapeSql(jsonObj.optString("userId"));
+        String firstName = escapeSql(jsonObj.optString("firstName"));
+        String lastName = escapeSql(jsonObj.optString("lastName"));
+        String dob = escapeSql(jsonObj.optString("dob")); // yyyy-mm-dd or blank
+        String nationality = escapeSql(jsonObj.optString("nationality"));
+        String gender = escapeSql(jsonObj.optString("gender"));
+        String phone = escapeSql(jsonObj.optString("phone"));
+
+        String value =
+            "SET @p_userId='" + userId + "'," +
+            " @p_firstName='" + firstName + "'," +
+            " @p_lastName='" + lastName + "'," +
+            " @p_dob='" + dob + "'," +
+            " @p_nationality='" + nationality + "'," +
+            " @p_gender='" + gender + "'," +
+            " @p_phone='" + phone + "';";
+
+        List<?> x = em.createNamedStoredProcedureQuery("coupon_management_Routines")
+                .setParameter("actionType", "updateProfileLMS")
+                .setParameter("actionValue", value)
+                .getResultList();
+
+        String status = "";
+        if (x != null && !x.isEmpty()) {
+            Object row = x.get(0);
+            if (row instanceof Object[]) {
+                Object[] arr = (Object[]) row;
+                status = arr.length > 0 && arr[0] != null ? arr[0].toString() : "";
+            } else {
+                status = row != null ? row.toString() : "";
+            }
+        }
+
+        if ("SUCCESS".equalsIgnoreCase(status)) {
+            resp.setCode("success");
+            resp.setMessage("Profile updated successfully");
+            resp.setBody(x.isEmpty() ? null : x.get(0));
+        } else if ("USER_NOT_FOUND".equalsIgnoreCase(status)) {
+            resp.setCode("failed");
+            resp.setMessage("User not found");
+            resp.setBody(x.isEmpty() ? null : x.get(0));
+        } else {
+            resp.setCode("failed");
+            resp.setMessage("Profile update failed");
+            resp.setBody(x.isEmpty() ? null : x.get(0));
+        }
+
+    } catch (Exception e) {
+        resp.setCode("failed");
+        resp.setMessage(e.getMessage());
+        logger.error("updateProfileLms error:", e);
+    }
+
+    logger.info("Method : updateProfileLms Dao ends");
+    return resp;
+}
+
 
 
 }

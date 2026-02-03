@@ -27,6 +27,8 @@ public class GraphEmailService {
     out.put("subject", TemplateUtil.render(tpl.get("subject"), payload));
     out.put("html", TemplateUtil.render(tpl.get("html"), payload));
     out.put("text", TemplateUtil.render(tpl.get("text"), payload));
+    // optional: expose cc for preview/debug
+    out.put("cc", tpl.get("cc"));
     return out;
   }
 
@@ -44,7 +46,10 @@ public class GraphEmailService {
     String html = TemplateUtil.render(tpl.get("html"), payload);
     String text = TemplateUtil.render(tpl.get("text"), payload);
 
-    graph.sendMail(toEmail, toName, subject, html, text);
+    // ✅ CC comes from DB template cc_list
+    String ccList = tpl.get("cc");
+
+    graph.sendMail(toEmail, toName, ccList, subject, html, text);
   }
 
   private Map<String, String> resolveTemplate(String templateCode, String locale, Integer version) {
