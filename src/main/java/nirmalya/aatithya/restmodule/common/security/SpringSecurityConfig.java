@@ -187,6 +187,11 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 				
                 
                 .antMatchers("/master/rest-save-enrollment-data").permitAll()
+
+
+             
+
+
                 
                 .antMatchers("/his/rest-getAllOperationalRecord").permitAll()
                 
@@ -280,7 +285,19 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
 
 			  .antMatchers("/otp/request").permitAll()
+			  .antMatchers("/master/rest-change-password-lms").permitAll()
 
+			  .antMatchers("/master/rest-update-profile-lms").permitAll()
+
+			  .antMatchers("/master/rest-reset-password-lms").permitAll()
+
+			  .antMatchers("/master/rest-profile-view-lms").permitAll()
+
+			  
+			  .antMatchers("/master/crm/lead/global").permitAll()
+
+
+			  
 			  .antMatchers("/otp/verify").permitAll()
 			  .antMatchers("/diag/**").permitAll()
 

@@ -1,9 +1,18 @@
 package nirmalya.aatithya.restmodule.lms.dao;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
+import org.hibernate.Session;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -14,7 +23,8 @@ import java.util.regex.Pattern;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
-
+import org.hibernate.Session;
+import org.springframework.stereotype.Repository;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1347,99 +1357,159 @@ public class AcademicCourseDao {
 	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> addContentData(Map<String, Object> payload) {
-	    logger.info("Method : addContentData DAO starts");
-
-	    JsonResponse<Object> resp = new JsonResponse<>();
-
-	    try {
- 
-	        String contentId       = (String) payload.get("contentId");   
-	        String contentType     = (String) payload.get("contentType");
-	        String category        = (String) payload.get("category");
-	        String title           = (String) payload.get("title");
-	        String shortDesc       = (String) payload.get("shortDescription");
-	        String fullDesc        = (String) payload.get("fullDescription");
-	        String author          = (String) payload.get("author");
-	        String status          = (String) payload.get("status");
-	        String publishDate     = (String) payload.get("publishDate");
- 
-	        String slug            = (String) payload.get("slug");
-	        String metaDesc        = (String) payload.get("metaDescription");
-	        String metaKeywords    = (String) payload.get("metaKeywords");
-	        String canonicalUrl    = (String) payload.get("canonicalUrl");
- 
-	        String organizationName= (String) payload.get("todOrgName");
-	        String orgDivision     = (String) payload.get("todOrgDivision");
-	        String site            = (String) payload.get("site");
-	        String orgName         = (String) payload.get("orgName");
-	        String division        = (String) payload.get("division");
- 
-	        String loginUserId     = (String) payload.get("loginUserId");
- 
-	        String uploadedFile    = (String) payload.get("uploadedFile");
- 
-	        StringBuilder sb = new StringBuilder();
-
-	        sb.append("SET ");
-
- 	        if (contentId != null && !contentId.trim().isEmpty()) {
-	            sb.append("@p_contentId='").append(contentId).append("',");
-	        }
-
-	        sb.append("@p_contentType='").append(contentType).append("',")
-	          .append("@p_category='").append(category).append("',")
-	          .append("@p_title='").append(title).append("',")
-	          .append("@p_shortDesc='").append(shortDesc).append("',")
-	          .append("@p_fullDesc='").append(fullDesc).append("',")
-	          .append("@p_author='").append(author).append("',")
-	          .append("@p_status='").append(status).append("',")
-	          .append("@p_publishDate='").append(publishDate).append("',")
- 
-	          .append("@p_slug='").append(slug).append("',")
-	          .append("@p_metaDesc='").append(metaDesc).append("',")
-	          .append("@p_metaKeywords='").append(metaKeywords).append("',")
-	          .append("@p_canonicalUrl='").append(canonicalUrl).append("',")
- 
-	          .append("@p_organizationName='").append(organizationName).append("',")
-	          .append("@p_orgDivision='").append(orgDivision).append("',")
-	          .append("@p_site='").append(site).append("',")
-	          .append("@p_orgName='").append(orgName).append("',")
-	          .append("@p_division='").append(division).append("',")
- 
-	          .append("@p_userId='").append(loginUserId).append("',")
- 
-	          .append("@p_uploadedFile='").append(uploadedFile).append("';");
-
-	        String finalValue = sb.toString();
-	        logger.info("📌 CMS SP PARAMS: {}", finalValue);
- 
-	        String actionType;
-
-	        if (contentId == null || contentId.trim().isEmpty()) {
-	            actionType = "add-cms-content";     
-	            logger.info("🟢 Performing INSERT (add-cms-content)");
-	        } else {
-	            actionType = "modify-cms-content";    
-	            logger.info("🟡 Performing UPDATE (modify-cms-content)");
-	        } 
-	        em.createNamedStoredProcedureQuery("academic_course_routines")
-	                .setParameter("actionType", actionType)
-	                .setParameter("actionValue", finalValue)
-	                .execute();
-
-	        resp.setCode("success");
-	        resp.setMessage("CMS content processed successfully");
-
-	    } catch (Exception e) {
-	        resp.setCode("failed");
-	        resp.setMessage(e.getMessage());
-	        logger.error("❌ DAO Error:", e);
-	    }
-
-	    logger.info("Method : addContentData DAO ends");
-	    return resp;
+		logger.info("Method : addContentData DAO starts");
+	
+		JsonResponse<Object> resp = new JsonResponse<>();
+	
+		try {
+			String contentId        = asText(payload.get("contentId"));
+			String contentType      = asText(payload.get("contentType"));
+			String category         = asText(payload.get("category"));
+			String title            = asText(payload.get("title"));
+			String shortDesc        = asText(payload.get("shortDescription"));
+			String fullDesc         = asText(payload.get("fullDescription"));
+			String author           = asText(payload.get("author"));
+	
+			// ✅ IMPORTANT: normalize active/inactive → a/i (because DB column is varchar(1))
+			String status           = normalizeStatus(asText(payload.get("status")));
+	
+			String publishDate      = asText(payload.get("publishDate"));
+	
+			String slug             = asText(payload.get("slug"));
+			String metaDesc         = asText(payload.get("metaDescription"));
+			String metaKeywords     = asText(payload.get("metaKeywords"));
+			String canonicalUrl     = asText(payload.get("canonicalUrl"));
+	
+			String organizationName = asText(payload.get("todOrgName"));
+			String orgDivision      = asText(payload.get("todOrgDivision"));
+			String site             = asText(payload.get("site"));
+			String orgName          = asText(payload.get("orgName"));
+			String division         = asText(payload.get("division"));
+	
+			String loginUserId      = asText(payload.get("loginUserId"));
+			String uploadedFile     = asText(payload.get("uploadedFile"));
+	
+			StringBuilder sb = new StringBuilder(2048);
+			sb.append("SET ");
+	
+			if (hasText(contentId)) {
+				sb.append("@p_contentId=").append(sql(contentId)).append(",");
+			}
+	
+			sb.append("@p_contentType=").append(sql(contentType)).append(",")
+			  .append("@p_category=").append(sql(category)).append(",")
+			  .append("@p_title=").append(sql(title)).append(",")
+			  .append("@p_shortDesc=").append(sql(shortDesc)).append(",")
+			  .append("@p_fullDesc=").append(sql(fullDesc)).append(",")
+			  .append("@p_author=").append(sql(author)).append(",")
+			  .append("@p_status=").append(sql(status)).append(",")
+			  .append("@p_publishDate=").append(sql(publishDate)).append(",")
+	
+			  .append("@p_slug=").append(sql(slug)).append(",")
+			  .append("@p_metaDesc=").append(sql(metaDesc)).append(",")
+			  .append("@p_metaKeywords=").append(sql(metaKeywords)).append(",")
+			  .append("@p_canonicalUrl=").append(sql(canonicalUrl)).append(",")
+	
+			  .append("@p_organizationName=").append(sql(organizationName)).append(",")
+			  .append("@p_orgDivision=").append(sql(orgDivision)).append(",")
+			  .append("@p_site=").append(sql(site)).append(",")
+			  .append("@p_orgName=").append(sql(orgName)).append(",")
+			  .append("@p_division=").append(sql(division)).append(",")
+	
+			  .append("@p_userId=").append(sql(loginUserId)).append(",")
+			  .append("@p_uploadedFile=").append(sql(uploadedFile));
+			  // ✅ NO trailing semicolon
+	
+			String actionValue = sb.toString();
+			logger.info("📌 CMS SP PARAMS: {}", actionValue);
+	
+			String actionType = (!hasText(contentId)) ? "add-cms-content" : "modify-cms-content";
+			logger.info("📌 CMS actionType: {}", actionType);
+	
+			callAcademicCourseRoutinesJdbc(actionType, actionValue);
+	
+			resp.setCode("success");
+			resp.setMessage("CMS content processed successfully");
+	
+		} catch (Exception e) {
+			// ✅ IMPORTANT: return ROOT cause, not generic "error executing work"
+			Throwable root = e;
+			while (root.getCause() != null && root.getCause() != root) {
+				root = root.getCause();
+			}
+			resp.setCode("failed");
+			resp.setMessage(root.getMessage());
+			logger.error("❌ DAO Error (root): {}", root.getMessage(), e);
+		}
+	
+		logger.info("Method : addContentData DAO ends");
+		return resp;
 	}
-
+	
+	/** JDBC call that safely drains all results/update counts to avoid getMoreResults issues */
+	private void callAcademicCourseRoutinesJdbc(String actionType, String actionValue) {
+		Session session = em.unwrap(Session.class);
+	
+		session.doWork((Connection con) -> {
+			try (CallableStatement cs = con.prepareCall("{call academic_course_routines(?, ?)}")) {
+	
+				cs.setString(1, actionType);
+				cs.setString(2, actionValue);
+	
+				boolean hasResultSet = cs.execute();
+	
+				// Drain all result sets + update counts
+				while (true) {
+					if (hasResultSet) {
+						try (ResultSet rs = cs.getResultSet()) {
+							// ignore
+						}
+					} else {
+						int updateCount = cs.getUpdateCount();
+						if (updateCount == -1) break;
+					}
+					hasResultSet = cs.getMoreResults();
+				}
+	
+			} catch (SQLException ex) {
+				// ✅ This message will reach API response now
+				String msg = "SQLState=" + ex.getSQLState()
+						   + ", ErrCode=" + ex.getErrorCode()
+						   + ", Msg=" + ex.getMessage();
+				throw new RuntimeException(msg, ex);
+			}
+		});
+	}
+	
+	/* ---------------- helpers ---------------- */
+	
+	private static String normalizeStatus(String s) {
+		if (!hasText(s)) return null;
+		String v = s.trim();
+		if ("active".equalsIgnoreCase(v)) return "a";
+		if ("inactive".equalsIgnoreCase(v)) return "i";
+		if ("a".equalsIgnoreCase(v) || "i".equalsIgnoreCase(v)) return v.toLowerCase();
+		return v;
+	}
+	
+	private static boolean hasText(String s) {
+		return s != null && !s.trim().isEmpty() && !"null".equalsIgnoreCase(s.trim());
+	}
+	
+	private static String asText(Object v) {
+		if (v == null) return null;
+		String s = String.valueOf(v);
+		if (!hasText(s)) return null;
+		return s.trim();
+	}
+	
+	/** returns SQL literal (quoted+escaped) or NULL */
+	private static String sql(String v) {
+		if (!hasText(v)) return "NULL";
+		String escaped = v.replace("\\", "\\\\").replace("'", "''");
+		return "'" + escaped + "'";
+	}
+	
 	@SuppressWarnings("unchecked")
 	public JsonResponse<Object> getAllBlogs(String orgName, String orgDivision) {
 		logger.info("Method : getAllBlogs Dao starts");
@@ -1527,7 +1597,6 @@ public class AcademicCourseDao {
 					resp.setCode("success");
 					resp.setMessage("Data not found");
 				} else {
-logger.info("dropDownModel"+dropDownModel);
 					resp.setCode("success");
 					resp.setMessage("Data fetched successfully");
 				}

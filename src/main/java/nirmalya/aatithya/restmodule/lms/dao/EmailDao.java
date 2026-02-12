@@ -28,12 +28,12 @@ public class EmailDao {
     if (payloadIsJson) {
       jdbc.update(
           "INSERT INTO email_queue (template_code, locale, version, to_email, to_name, payload_json) " +
-          "VALUES (?,?,?,?,?,CAST(? AS JSON))",
+              "VALUES (?,?,?,?,?,CAST(? AS JSON))",
           code, locale, version, toEmail, toName, json);
     } else {
       jdbc.update(
           "INSERT INTO email_queue (template_code, locale, version, to_email, to_name, payload_json) " +
-          "VALUES (?,?,?,?,?,?)",
+              "VALUES (?,?,?,?,?,?)",
           code, locale, version, toEmail, toName, json);
     }
     return jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
@@ -41,27 +41,27 @@ public class EmailDao {
 
   public List<Map<String, Object>> fetchPendingBatch(int limit) {
     return jdbc.query(
-      "SELECT id, template_code, locale, version, to_email, to_name, payload_json, try_count " +
-      "FROM email_queue WHERE status='PENDING' ORDER BY created_at ASC LIMIT ?",
-      (ResultSet rs, int i) -> {
-        Map<String,Object> map = new HashMap<String,Object>();
-        map.put("id", rs.getLong("id"));
-        map.put("code", rs.getString("template_code"));
-        String loc = rs.getString("locale");
-        map.put("locale", (loc == null || loc.trim().isEmpty()) ? "en-IN" : loc);
-        Object verObj = rs.getObject("version");
-        map.put("version", verObj == null ? null : (Integer) verObj);
-        map.put("to", rs.getString("to_email"));
-        map.put("name", rs.getString("to_name"));
-        try {
-          map.put("payload", om.readValue(rs.getString("payload_json"), Map.class));
-        } catch (Exception e) {
-          map.put("payload", Collections.emptyMap());
-        }
-        map.put("tryCount", rs.getInt("try_count"));
-        return map;
-      },
-      limit
+        "SELECT id, template_code, locale, version, to_email, to_name, payload_json, try_count " +
+            "FROM email_queue WHERE status='PENDING' ORDER BY created_at ASC LIMIT ?",
+        (ResultSet rs, int i) -> {
+          Map<String,Object> map = new HashMap<String,Object>();
+          map.put("id", rs.getLong("id"));
+          map.put("code", rs.getString("template_code"));
+          String loc = rs.getString("locale");
+          map.put("locale", (loc == null || loc.trim().isEmpty()) ? "en-IN" : loc);
+          Object verObj = rs.getObject("version");
+          map.put("version", verObj == null ? null : (Integer) verObj);
+          map.put("to", rs.getString("to_email"));
+          map.put("name", rs.getString("to_name"));
+          try {
+            map.put("payload", om.readValue(rs.getString("payload_json"), Map.class));
+          } catch (Exception e) {
+            map.put("payload", Collections.emptyMap());
+          }
+          map.put("tryCount", rs.getInt("try_count"));
+          return map;
+        },
+        limit
     );
   }
 
@@ -75,9 +75,9 @@ public class EmailDao {
 
   public int markError(long id, String err) {
     return jdbc.update(
-      "UPDATE email_queue SET status=IF(try_count>=max_retries,'FAILED','PENDING'), " +
-      "last_error=?, updated_at=NOW() WHERE id=?",
-      truncate(err, 1500), id
+        "UPDATE email_queue SET status=IF(try_count>=max_retries,'FAILED','PENDING'), " +
+            "last_error=?, updated_at=NOW() WHERE id=?",
+        truncate(err, 1500), id
     );
   }
 
@@ -86,54 +86,57 @@ public class EmailDao {
     return s.length() > max ? s.substring(0, max) : s;
   }
 
-  /* ---------- Template lookups (type-safe) ---------- */
+  /* ---------- Template lookups (now includes cc_list) ---------- */
 
   public Map<String, String> findExactTemplate(String code, String locale, Integer version) {
     List<Map<String, String>> list = jdbc.query(
-      "SELECT subject, body_html, body_text FROM email_template_ver " +
-      "WHERE template_code=? AND is_active=1 AND locale=? AND version=? LIMIT 1",
-      (rs, i) -> {
-        Map<String, String> m = new HashMap<String, String>();
-        m.put("subject", rs.getString("subject"));
-        m.put("html", rs.getString("body_html"));
-        m.put("text", rs.getString("body_text"));
-        return m;
-      },
-      code, locale, version
+        "SELECT subject, body_html, body_text, cc_list FROM email_template_ver " +
+            "WHERE template_code=? AND is_active=1 AND locale=? AND version=? LIMIT 1",
+        (rs, i) -> {
+          Map<String, String> m = new HashMap<String, String>();
+          m.put("subject", rs.getString("subject"));
+          m.put("html", rs.getString("body_html"));
+          m.put("text", rs.getString("body_text"));
+          m.put("cc", rs.getString("cc_list"));
+          return m;
+        },
+        code, locale, version
     );
     return list.isEmpty() ? null : list.get(0);
   }
 
   public Map<String, String> findDefaultForLocale(String code, String locale) {
     List<Map<String, String>> list = jdbc.query(
-      "SELECT subject, body_html, body_text FROM email_template_ver " +
-      "WHERE template_code=? AND is_active=1 AND locale=? AND is_default=1 " +
-      "ORDER BY version DESC LIMIT 1",
-      (rs, i) -> {
-        Map<String, String> m = new HashMap<String, String>();
-        m.put("subject", rs.getString("subject"));
-        m.put("html", rs.getString("body_html"));
-        m.put("text", rs.getString("body_text"));
-        return m;
-      },
-      code, locale
+        "SELECT subject, body_html, body_text, cc_list FROM email_template_ver " +
+            "WHERE template_code=? AND is_active=1 AND locale=? AND is_default=1 " +
+            "ORDER BY version DESC LIMIT 1",
+        (rs, i) -> {
+          Map<String, String> m = new HashMap<String, String>();
+          m.put("subject", rs.getString("subject"));
+          m.put("html", rs.getString("body_html"));
+          m.put("text", rs.getString("body_text"));
+          m.put("cc", rs.getString("cc_list"));
+          return m;
+        },
+        code, locale
     );
     return list.isEmpty() ? null : list.get(0);
   }
 
   public Map<String, String> findDefaultEnglish(String code) {
     List<Map<String, String>> list = jdbc.query(
-      "SELECT subject, body_html, body_text FROM email_template_ver " +
-      "WHERE template_code=? AND is_active=1 AND locale='en' AND is_default=1 " +
-      "ORDER BY version DESC LIMIT 1",
-      (rs, i) -> {
-        Map<String, String> m = new HashMap<String, String>();
-        m.put("subject", rs.getString("subject"));
-        m.put("html", rs.getString("body_html"));
-        m.put("text", rs.getString("body_text"));
-        return m;
-      },
-      code
+        "SELECT subject, body_html, body_text, cc_list FROM email_template_ver " +
+            "WHERE template_code=? AND is_active=1 AND locale='en' AND is_default=1 " +
+            "ORDER BY version DESC LIMIT 1",
+        (rs, i) -> {
+          Map<String, String> m = new HashMap<String, String>();
+          m.put("subject", rs.getString("subject"));
+          m.put("html", rs.getString("body_html"));
+          m.put("text", rs.getString("body_text"));
+          m.put("cc", rs.getString("cc_list"));
+          return m;
+        },
+        code
     );
     return list.isEmpty() ? null : list.get(0);
   }
