@@ -68,7 +68,7 @@ public class RestCrmCallDao {
 					logger.info("add=============" + call.getCallId());
 
 					String pageTypeContact = "Contact";
-					String pageTypeLead = "Lead";
+					String pageTypeLead = "Lead"; 
 					String pageTypeAccount = "Account";
 					String pageTypeDeal = "Deal";
 					String pageTypeCall = "Call";
@@ -79,7 +79,9 @@ public class RestCrmCallDao {
 					String pageTypeInvoice = "Invoice";
 
 					String pageType = call.getPageType();
-
+   
+					logger.info("llllllllll"+pageType);	
+					
 					if (pageType.equals(pageTypeCall)) {
 
 						if (call.getLeadId() == null || call.getLeadId() == "") {
@@ -110,13 +112,14 @@ public class RestCrmCallDao {
 					}
 
 					if (pageType.equals(pageTypeContact)) {
+						logger.info("valuee"+values);
 						if (call.getLeadId() == null || call.getLeadId() == "") {
 							logger.info("Executing actionType: addCallContactTypeC");
 							em.createNamedStoredProcedureQuery("crm_call")
 									.setParameter("actionType", "addCallContactTypeC")
 									.setParameter("actionValue", values).execute();
 						} else {
-							logger.info("Executing actionType------: addCallContactTypeC");
+							logger.info("Executing actionType------: addLeadTypeC");
 							em.createNamedStoredProcedureQuery("crm_call").setParameter("actionType", "addLeadTypeC")
 									.setParameter("actionValue", values).execute();
 						}
@@ -199,7 +202,7 @@ public class RestCrmCallDao {
 									.setParameter("actionValue", values).execute();
 						}
 					}
-					callsMail(call,resp, uid);
+				//	callsMail(call,resp, uid);
 					
 				}
 
@@ -257,6 +260,16 @@ public class RestCrmCallDao {
 	 
         
 	   EmailCalendarEvent emailEvent = new EmailCalendarEvent();
+		/*
+		 * logger.info("subject"+subject); logger.info("username"+username);
+		 * logger.info("password"+password); logger.info("toAddress"+toAddress);
+		 * logger.info("host"+host); logger.info("port"+port);
+		 * logger.info("Bhubaneswar"); logger.info("subject"+subject);
+		 * logger.info("desc"+desc); logger.info("fromDateTime"+fromDateTime);
+		 * logger.info("toDateTime"+toDateTime); logger.info("ccAddress"+ccAddress);
+		 * logger.info("bccAddress"+bccAddress); logger.info("uid"+uid);
+		 */
+	
 	
 		try {
 			emailEvent.send(subject, username, password, toAddress, host, port, "Bhubaneswar",
