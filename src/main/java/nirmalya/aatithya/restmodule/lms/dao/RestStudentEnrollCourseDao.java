@@ -708,4 +708,87 @@ public JsonResponse<Object> updateProfileLms(String data) {
 
 
 
+
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> removeEnrollmentTraining(String orgName, String orgDivision, String enrolledBy, String updatedBy, String data) {
+    logger.info("Method : removeEnrollmentTraining Dao starts, enrolledBy={}", enrolledBy);
+    JsonResponse<Object> resp = new JsonResponse<>();
+
+    try {
+        JSONObject jsonObj = new JSONObject(data);
+
+        // Accept either productId or productIds[]
+        java.util.List<String> productList = new java.util.ArrayList<>();
+        if (jsonObj.has("productIds")) {
+            JSONArray arr = jsonObj.getJSONArray("productIds");
+            for (int i = 0; i < arr.length(); i++) {
+                String pid = arr.optString(i, "").trim();
+                if (!pid.isEmpty()) productList.add(pid);
+            }
+        } else {
+            String productId = jsonObj.optString("productId", "").trim();
+            if (!productId.isEmpty()) productList.add(productId);
+        }
+
+        // removeTrainingIds can be string CSV OR array
+        String removeTrainingCsv = "";
+        if (jsonObj.has("removeTrainingIds") && jsonObj.get("removeTrainingIds") instanceof JSONArray) {
+            JSONArray rmArr = jsonObj.getJSONArray("removeTrainingIds");
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < rmArr.length(); i++) {
+                String t = rmArr.optString(i, "").trim();
+                if (t.isEmpty()) continue;
+                if (sb.length() > 0) sb.append(",");
+                sb.append(t);
+            }
+            removeTrainingCsv = sb.toString();
+        } else {
+            removeTrainingCsv = jsonObj.optString("removeTrainingIds", "").trim();
+        }
+
+        if (productList.isEmpty()) {
+            resp.setCode("failed");
+            resp.setMessage("productId/productIds missing");
+            return resp;
+        }
+        if (removeTrainingCsv == null || removeTrainingCsv.trim().isEmpty()) {
+            resp.setCode("failed");
+            resp.setMessage("removeTrainingIds missing");
+            return resp;
+        }
+
+        // IMPORTANT: enrolledBy is student id; updatedBy is admin/session user (or same if not available)
+        String safeUpdatedBy = (updatedBy != null && !updatedBy.trim().isEmpty()) ? updatedBy.trim() : enrolledBy;
+
+        for (String productId : productList) {
+            String value =
+                "SET @p_org='" + escapeSql(orgName) +
+                "', @p_orgDiv='" + escapeSql(orgDivision) +
+                "', @p_enrollBy='" + escapeSql(enrolledBy) +
+                "', @p_productId='" + escapeSql(productId) +
+                "', @p_removeTrainingIds='" + escapeSql(removeTrainingCsv) +
+                "', @p_updatedBy='" + escapeSql(safeUpdatedBy) + "';";
+
+            logger.info("value for removeEnrollmentTraining: {}", value);
+
+            em.createNamedStoredProcedureQuery("coupon_management_Routines")
+              .setParameter("actionType", "removeEnrolmentTraining")
+              .setParameter("actionValue", value)
+              .execute();
+        }
+
+        resp.setCode("success");
+        resp.setMessage("Training removed successfully");
+
+    } catch (Exception e) {
+        resp.setCode("failed");
+        resp.setMessage(e.getMessage());
+        logger.error("removeEnrollmentTraining error", e);
+    }
+
+    logger.info("Method : removeEnrollmentTraining Dao ends");
+    return resp;
+}
+
+
 }

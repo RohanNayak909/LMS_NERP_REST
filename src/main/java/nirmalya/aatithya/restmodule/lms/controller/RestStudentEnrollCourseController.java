@@ -95,6 +95,21 @@ import nirmalya.aatithya.restmodule.lms.dao.RestStudentEnrollCourseDao;
 		logger.info("Method :saveEnrollmentData endss");
 		return restStudentEnrollCourseDao.saveEnrollmentData(orgName, orgDivision, userId, data);
 	}
-	
+	@RequestMapping(value = "rest-remove-enrollment-training", method = { RequestMethod.POST })
+public JsonResponse<Object> removeEnrollmentTraining(
+        @RequestParam String orgName,
+        @RequestParam String orgDivision,
+        @RequestParam String userId,          // enrolledBy (student id)
+        @RequestParam(required = false) String updatedBy,  // admin id (optional)
+        @RequestBody String data) {
+
+    logger.info("Method : removeEnrollmentTraining starts");
+    logger.info("Method : removeEnrollmentTraining ends");
+    return restStudentEnrollCourseDao.removeEnrollmentTraining(orgName, orgDivision, userId, updatedBy, data);
+}
+
+
+
+
 	
 }
