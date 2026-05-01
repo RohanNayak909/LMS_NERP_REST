@@ -492,4 +492,73 @@ public ResponseEntity<JsonResponse<Object>> getCourseDurations(
 		return resp;
 	}
 
+
+	@RequestMapping(value = "rest-academic-course-training-price-country-list", method = { RequestMethod.GET })
+public JsonResponse<Object> getTrainingPriceCountryList(@RequestParam String orgName,
+		@RequestParam String orgDivision) {
+	logger.info("Method : getTrainingPriceCountryList start");
+	logger.info("Method : getTrainingPriceCountryList ends");
+	return academicCourseDao.getTrainingPriceCountryList(orgName, orgDivision);
+}
+
+@RequestMapping(value = "rest-academic-course-training-price-training-list", method = { RequestMethod.GET })
+public JsonResponse<Object> getTrainingPriceTrainingList(@RequestParam String orgName,
+		@RequestParam String orgDivision, @RequestParam String courseId) {
+	logger.info("Method : getTrainingPriceTrainingList start");
+	logger.info("Method : getTrainingPriceTrainingList ends");
+	return academicCourseDao.getTrainingPriceTrainingList(orgName, orgDivision, courseId);
+}
+
+@RequestMapping(value = "rest-academic-course-training-price-view", method = { RequestMethod.GET })
+public JsonResponse<Object> viewTrainingPricing(@RequestParam String orgName, @RequestParam String orgDivision,
+		@RequestParam String courseId, @RequestParam String trainingId) {
+	logger.info("Method : viewTrainingPricing start");
+	logger.info("Method : viewTrainingPricing ends");
+	return academicCourseDao.viewTrainingPricing(orgName, orgDivision, courseId, trainingId);
+}
+
+@PostMapping(value = "rest-academic-course-training-price-save")
+public ResponseEntity<JsonResponse<Object>> saveTrainingPricing(@RequestBody String payload,
+		@RequestParam String userId, @RequestParam String org, @RequestParam String orgDiv) {
+	logger.info("Method : saveTrainingPricing starts");
+	logger.info("Payload: {}", payload);
+	logger.info("Method : saveTrainingPricing ends");
+	return academicCourseDao.saveTrainingPricing(payload, userId, org, orgDiv);
+}
+
+@PostMapping(value = "rest-academic-course-training-price-delete")
+public ResponseEntity<JsonResponse<Object>> deleteTrainingPricing(@RequestBody String payload,
+		@RequestParam String userId, @RequestParam String org, @RequestParam String orgDiv) {
+	logger.info("Method : deleteTrainingPricing starts");
+	logger.info("Payload: {}", payload);
+	logger.info("Method : deleteTrainingPricing ends");
+	return academicCourseDao.deleteTrainingPricing(payload, userId, org, orgDiv);
+}
+@RequestMapping(value = "rest-course-training-pricing-matrix", method = { RequestMethod.GET })
+public JsonResponse<Object> getCourseTrainingPricingMatrix(@RequestParam String courseId) {
+	logger.info("Method : getCourseTrainingPricingMatrix start");
+	JsonResponse<Object> resp = academicCourseDao.getCourseTrainingPricingMatrix(courseId);
+	logger.info("Method : getCourseTrainingPricingMatrix ends");
+	return resp;
+}
+@RequestMapping(value = "rest-all-product-details-pricing-summary", method = { RequestMethod.GET })
+public JsonResponse<Object> getAllProductDetailsWithPricingSummary(
+		@RequestParam(required = false) String countryCode) {
+	logger.info("Method : getAllProductDetailsWithPricingSummary start");
+	logger.info("Method : getAllProductDetailsWithPricingSummary ends");
+	return academicCourseDao.getAllProductDetailsWithPricingSummary(countryCode);
+}
+@PostMapping(value = "rest-public-visitor-init")
+public JsonResponse<Object> publicVisitorInit(@RequestBody Map<String, Object> payload) {
+	logger.info("Method : publicVisitorInit starts");
+	logger.info("Method : publicVisitorInit ends");
+	return academicCourseDao.publicVisitorInit(payload);
+}
+
+@PostMapping(value = "rest-public-visitor-event")
+public JsonResponse<Object> publicVisitorEvent(@RequestBody Map<String, Object> payload) {
+	logger.info("Method : publicVisitorEvent starts");
+	logger.info("Method : publicVisitorEvent ends");
+	return academicCourseDao.publicVisitorEvent(payload);
+}
 }

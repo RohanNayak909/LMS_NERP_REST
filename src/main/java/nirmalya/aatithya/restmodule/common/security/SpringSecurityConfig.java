@@ -294,10 +294,21 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 			  .antMatchers("/master/rest-profile-view-lms").permitAll()
 
 			  
-			  .antMatchers("/master/crm/lead/global").permitAll()
+			  .antMatchers("/his/rest-academic-course-training-price-country-list").permitAll()
+.antMatchers("/his/rest-academic-course-training-price-training-list").permitAll()
+.antMatchers("/his/rest-academic-course-training-price-view").permitAll()
+.antMatchers("/his/rest-academic-course-training-price-save").permitAll()
+.antMatchers("/his/rest-academic-course-training-price-delete").permitAll()
 
 
-			  
+.antMatchers("/his/rest-course-training-pricing-matrix").permitAll()
+.antMatchers("/his/rest-all-product-details-pricing-summary").permitAll()
+.antMatchers("/his/rest-public-visitor-init").permitAll()
+.antMatchers("/his/rest-public-visitor-event").permitAll()
+
+
+
+
 			  .antMatchers("/otp/verify").permitAll()
 			  .antMatchers("/diag/**").permitAll()
 

@@ -20,6 +20,7 @@ public class RetakeOrderInfo {
   public void setOrderCode(String orderCode) {
     this.orderCode = orderCode;
   }
+  
 
   public int getBasePaise() {
     return basePaise;

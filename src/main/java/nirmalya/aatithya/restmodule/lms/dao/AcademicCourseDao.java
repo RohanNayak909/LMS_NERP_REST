@@ -49,7 +49,13 @@ import com.google.gson.JsonObject;
  import nirmalya.aatithya.restmodule.common.ServerDao;
 import nirmalya.aatithya.restmodule.common.utils.DropDownModel;
 import nirmalya.aatithya.restmodule.common.utils.JsonResponse;
+import java.math.BigDecimal;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
 @Repository
 public class AcademicCourseDao {
 	Logger logger = LoggerFactory.getLogger(AcademicCourseDao.class);
@@ -2052,11 +2058,442 @@ public JsonResponse<Object> getAllCourseDetailsWithTrainingsNoDocs(
 }
 
 
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> getTrainingPriceCountryList(String orgName, String orgDivision) {
+	logger.info("Method : getTrainingPriceCountryList Dao starts");
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		String value = "SET @p_org='" + orgName.replace("'", "''") + "',"
+				+ "@p_orgDiv='" + orgDivision.replace("'", "''") + "';";
+
+		logger.info("Action Value: {}", value);
+
+		List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "viewTrainingPriceCountryList")
+				.setParameter("actionValue", value)
+				.getResultList();
+
+		resp.setBody(list);
+
+	} catch (Exception e) {
+		logger.error("Exception in getTrainingPriceCountryList Dao", e);
+	}
+
+	logger.info("Method : getTrainingPriceCountryList Dao ends");
+	return resp;
+}
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> getTrainingPriceTrainingList(String orgName, String orgDivision, String courseId) {
+	logger.info("Method : getTrainingPriceTrainingList Dao starts");
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		String value = "SET @p_org='" + orgName.replace("'", "''") + "',"
+				+ "@p_orgDiv='" + orgDivision.replace("'", "''") + "',"
+				+ "@p_courseId='" + courseId.replace("'", "''") + "';";
+
+		logger.info("Action Value: {}", value);
+
+		List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "viewTrainingPriceTrainingList")
+				.setParameter("actionValue", value)
+				.getResultList();
+
+		logger.info("Training list raw DB result: {}", list);
+
+		if (list != null && !list.isEmpty()) {
+			resp.setBody(list);
+		} else {
+			resp.setBody(java.util.Collections.emptyList());
+		}
+
+	} catch (Exception e) {
+		logger.error("Exception in getTrainingPriceTrainingList Dao", e);
+		resp.setBody(java.util.Collections.emptyList());
+	}
+
+	logger.info("Method : getTrainingPriceTrainingList Dao ends");
+	return resp;
+}
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> viewTrainingPricing(String orgName, String orgDivision, String courseId,
+		String trainingId) {
+	logger.info("Method : viewTrainingPricing Dao starts");
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		String value = "SET @p_org='" + orgName.replace("'", "''") + "',"
+				+ "@p_orgDiv='" + orgDivision.replace("'", "''") + "',"
+				+ "@p_courseId='" + courseId.replace("'", "''") + "',"
+				+ "@p_trainingId='" + trainingId.replace("'", "''") + "';";
+
+		logger.info("Action Value: {}", value);
+
+		List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "viewTrainingPricing")
+				.setParameter("actionValue", value)
+				.getResultList();
+
+		resp.setBody(list);
+
+	} catch (Exception e) {
+		logger.error("Exception in viewTrainingPricing Dao", e);
+	}
+
+	logger.info("Method : viewTrainingPricing Dao ends");
+	return resp;
+}
 
 
 
+@SuppressWarnings("unchecked")
+public ResponseEntity<JsonResponse<Object>> saveTrainingPricing(String payload, String userId, String org,
+		String orgDiv) {
+	logger.info("Method: saveTrainingPricing Dao Starts {}", payload);
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+		JsonObject jsonObject = gson.fromJson(payload, JsonObject.class);
+
+		String courseId = jsonObject.has("courseId") && !jsonObject.get("courseId").isJsonNull()
+				? jsonObject.get("courseId").getAsString()
+				: "";
+		String trainingId = jsonObject.has("trainingId") && !jsonObject.get("trainingId").isJsonNull()
+				? jsonObject.get("trainingId").getAsString()
+				: "";
+
+		if (courseId == null || courseId.trim().isEmpty()) {
+			resp.setCode("Failed");
+			resp.setMessage("Course Id is required");
+			return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.BAD_REQUEST);
+		}
+
+		if (trainingId == null || trainingId.trim().isEmpty()) {
+			resp.setCode("Failed");
+			resp.setMessage("Training Id is required");
+			return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.BAD_REQUEST);
+		}
+
+		if (jsonObject.has("pricingRows") && jsonObject.get("pricingRows").isJsonArray()) {
+			JsonArray pricingRows = jsonObject.getAsJsonArray("pricingRows");
+
+			for (int i = 0; i < pricingRows.size(); i++) {
+				JsonObject row = pricingRows.get(i).getAsJsonObject();
+
+				String priceScope = row.has("priceScope") && !row.get("priceScope").isJsonNull()
+						? row.get("priceScope").getAsString()
+						: "";
+
+				String countryId = row.has("countryId") && !row.get("countryId").isJsonNull()
+						? row.get("countryId").getAsString()
+						: "";
+
+				if ("COUNTRY".equalsIgnoreCase(priceScope) && (countryId == null || countryId.trim().isEmpty())) {
+					resp.setCode("Failed");
+					resp.setMessage("Country is mandatory for COUNTRY scope rows");
+					return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.BAD_REQUEST);
+				}
+
+				if ("GLOBAL".equalsIgnoreCase(priceScope)) {
+					row.addProperty("countryId", "GLOBAL");
+					row.addProperty("countryCode", "GLOBAL");
+					row.addProperty("countryName", "Global");
+				}
+
+				BigDecimal basePrice = getBigDecimal(row, "basePrice");
+				BigDecimal taxPercent = getBigDecimal(row, "taxPercent");
+				BigDecimal finalPrice = getBigDecimal(row, "finalPrice");
+
+				if (basePrice.compareTo(BigDecimal.ZERO) < 0) {
+					resp.setCode("Failed");
+					resp.setMessage("Base price cannot be negative");
+					return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.BAD_REQUEST);
+				}
+
+				if (taxPercent.compareTo(BigDecimal.ZERO) < 0) {
+					resp.setCode("Failed");
+					resp.setMessage("Tax percent cannot be negative");
+					return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.BAD_REQUEST);
+				}
+
+				if (finalPrice.compareTo(BigDecimal.ZERO) < 0) {
+					resp.setCode("Failed");
+					resp.setMessage("Final price cannot be negative");
+					return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.BAD_REQUEST);
+				}
+			}
+		}
+
+		String safePayload = gson.toJson(jsonObject);
+		safePayload = safePayload.replace("\\", "\\\\");
+		safePayload = safePayload.replace("'", "''");
+
+		String escapedUserId = userId.replace("'", "''");
+		String escapedOrg = org.replace("'", "''");
+		String escapedOrgDiv = orgDiv.replace("'", "''");
+
+		String actionValue = "SET @data='" + safePayload + "', "
+				+ "@p_userId='" + escapedUserId + "', "
+				+ "@p_org='" + escapedOrg + "', "
+				+ "@p_orgDiv='" + escapedOrgDiv + "';";
+
+		logger.info("Constructed actionValue for saveTrainingPricing: {}", actionValue);
+
+		em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "saveTrainingPricing")
+				.setParameter("actionValue", actionValue)
+				.execute();
+
+		resp.setCode("Success");
+		resp.setMessage("Training Pricing Saved Successfully!");
+
+	} catch (Exception e) {
+		logger.error("Exception in saveTrainingPricing Dao", e);
+		resp.setCode("Failed");
+		resp.setMessage(e.getMessage());
+	}
+
+	logger.info("Method: saveTrainingPricing Dao Ends");
+	return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.CREATED);
+}
+@SuppressWarnings("unchecked")
+public ResponseEntity<JsonResponse<Object>> deleteTrainingPricing(String payload, String userId, String org,
+		String orgDiv) {
+	logger.info("Method: deleteTrainingPricing Dao Starts {}", payload);
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+		JsonObject jsonObject = gson.fromJson(payload, JsonObject.class);
+
+		String priceId = jsonObject.has("priceId") && !jsonObject.get("priceId").isJsonNull()
+				? jsonObject.get("priceId").getAsString()
+				: "";
+
+		if (priceId == null || priceId.trim().isEmpty()) {
+			resp.setCode("Failed");
+			resp.setMessage("Price Id is required");
+			return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.BAD_REQUEST);
+		}
+
+		String escapedUserId = userId.replace("'", "''");
+		String escapedOrg = org.replace("'", "''");
+		String escapedOrgDiv = orgDiv.replace("'", "''");
+		String escapedPriceId = priceId.replace("'", "''");
+
+		String actionValue = "SET @p_userId='" + escapedUserId + "', "
+				+ "@p_org='" + escapedOrg + "', "
+				+ "@p_orgDiv='" + escapedOrgDiv + "', "
+				+ "@p_priceId='" + escapedPriceId + "';";
+
+		logger.info("Constructed actionValue for deleteTrainingPricing: {}", actionValue);
+
+		em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "deleteTrainingPricing")
+				.setParameter("actionValue", actionValue)
+				.execute();
+
+		resp.setCode("Success");
+		resp.setMessage("Training Pricing Deleted Successfully!");
+
+	} catch (Exception e) {
+		logger.error("Exception in deleteTrainingPricing Dao", e);
+		resp.setCode("Failed");
+		resp.setMessage(e.getMessage());
+	}
+
+	logger.info("Method: deleteTrainingPricing Dao Ends");
+	return new ResponseEntity<JsonResponse<Object>>(resp, HttpStatus.CREATED);
+}
 
 
-	
+private BigDecimal getBigDecimal(JsonObject jsonObject, String key) {
+	try {
+		if (jsonObject.has(key) && !jsonObject.get(key).isJsonNull()) {
+			String val = jsonObject.get(key).getAsString();
+			if (val != null && !val.trim().isEmpty()) {
+				return new BigDecimal(val.trim());
+			}
+		}
+	} catch (Exception e) {
+		logger.warn("Unable to parse decimal for key {}. Defaulting to 0", key);
+	}
+	return BigDecimal.ZERO;
+}
 
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> getCourseTrainingPricingMatrix(String courseId) {
+	logger.info("Method : getCourseTrainingPricingMatrix Dao starts");
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		String safeCourseId = courseId == null ? "" : courseId.replace("'", "''").trim();
+
+		if (safeCourseId.isEmpty()) {
+			resp.setCode("failed");
+			resp.setMessage("Course Id is required");
+			resp.setBody(null);
+			return resp;
+		}
+
+		String value = "{\"courseId\":\"" + safeCourseId + "\"}";
+		logger.info("Action Value: {}", value);
+
+		List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "getCourseTrainingPricingMatrix")
+				.setParameter("actionValue", value)
+				.getResultList();
+
+		if (list != null && !list.isEmpty()) {
+			resp.setBody(list.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} else {
+			resp.setBody(null);
+			resp.setCode("failed");
+			resp.setMessage("No data found");
+		}
+
+	} catch (Exception e) {
+		logger.error("Exception in getCourseTrainingPricingMatrix Dao", e);
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		resp.setBody(null);
+	}
+
+	logger.info("Method : getCourseTrainingPricingMatrix Dao ends");
+	return resp;
+}
+
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> getAllProductDetailsWithPricingSummary(String countryCode) {
+	logger.info("Method : getAllProductDetailsWithPricingSummary Dao starts");
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		String safeCountryCode = countryCode == null ? "" : countryCode.replace("'", "''").trim().toUpperCase();
+
+		String value = "{\"countryCode\":\"" + safeCountryCode + "\"}";
+		logger.info("Action Value: {}", value);
+
+		List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "getAllProductDetailsWithPricingSummary")
+				.setParameter("actionValue", value)
+				.getResultList();
+
+		if (list != null && !list.isEmpty()) {
+			resp.setBody(list.get(0));
+			resp.setCode("success");
+			resp.setMessage("Data fetched successfully");
+		} else {
+			resp.setBody(null);
+			resp.setCode("failed");
+			resp.setMessage("No data found");
+		}
+
+	} catch (Exception e) {
+		logger.error("Exception in getAllProductDetailsWithPricingSummary Dao", e);
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		resp.setBody(null);
+	}
+
+	logger.info("Method : getAllProductDetailsWithPricingSummary Dao ends");
+	return resp;
+}
+
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> publicVisitorInit(Map<String, Object> payload) {
+	logger.info("Method : publicVisitorInit Dao starts");
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+		String safePayload = gson.toJson(payload);
+
+		// keep JSON safe for MySQL string variable
+		safePayload = safePayload.replace("\\", "\\\\");
+		safePayload = safePayload.replace("'", "''");
+
+		String actionValue = "SET @data='" + safePayload + "';";
+		logger.info("publicVisitorInit actionValue: {}", actionValue);
+
+		List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "publicVisitorInit")
+				.setParameter("actionValue", actionValue)
+				.getResultList();
+
+		if (list != null && !list.isEmpty()) {
+			resp.setBody(list.get(0));
+			resp.setCode("success");
+			resp.setMessage("Visitor init stored successfully");
+		} else {
+			resp.setBody(null);
+			resp.setCode("success");
+			resp.setMessage("Visitor init executed successfully");
+		}
+
+	} catch (Exception e) {
+		logger.error("Exception in publicVisitorInit Dao", e);
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		resp.setBody(null);
+	}
+
+	logger.info("Method : publicVisitorInit Dao ends");
+	return resp;
+}
+
+@SuppressWarnings("unchecked")
+public JsonResponse<Object> publicVisitorEvent(Map<String, Object> payload) {
+	logger.info("Method : publicVisitorEvent Dao starts");
+
+	JsonResponse<Object> resp = new JsonResponse<Object>();
+
+	try {
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+		String safePayload = gson.toJson(payload);
+
+		// keep JSON safe for MySQL string variable
+		safePayload = safePayload.replace("\\", "\\\\");
+		safePayload = safePayload.replace("'", "''");
+
+		String actionValue = "SET @data='" + safePayload + "';";
+		logger.info("publicVisitorEvent actionValue: {}", actionValue);
+
+		List<Object[]> list = em.createNamedStoredProcedureQuery("academic_course_routines")
+				.setParameter("actionType", "publicVisitorEvent")
+				.setParameter("actionValue", actionValue)
+				.getResultList();
+
+		if (list != null && !list.isEmpty()) {
+			resp.setBody(list.get(0));
+			resp.setCode("success");
+			resp.setMessage("Visitor event stored successfully");
+		} else {
+			resp.setBody(null);
+			resp.setCode("success");
+			resp.setMessage("Visitor event executed successfully");
+		}
+
+	} catch (Exception e) {
+		logger.error("Exception in publicVisitorEvent Dao", e);
+		resp.setCode("failed");
+		resp.setMessage(e.getMessage());
+		resp.setBody(null);
+	}
+
+	logger.info("Method : publicVisitorEvent Dao ends");
+	return resp;
+}
 }
